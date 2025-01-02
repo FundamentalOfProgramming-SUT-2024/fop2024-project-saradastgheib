@@ -5,8 +5,20 @@
 #include <time.h>
 //403105941
 char current_username[50] = "";
+char game_mode[20] = "";
+char character_color[20]= "";
 #define FILENAME "users.txt"
 #define HALLFILE "halloffame.txt"
+#define MAP_WIDTH 50
+#define MAP_HEIGHT 50
+#define WALLVERT '|'
+#define WALLHOR '_'
+#define FLOOR '.'
+#define CORRIDOR '#'
+#define EMTPY ' '
+#define MIN_ROOM_SIZE 4
+#define VISIBLE_DISTANCE 5
+char gamemap[MAP_HEIGHT][MAP_WIDTH];
 typedef struct {
     char username[50];
     char password[50];
@@ -35,6 +47,14 @@ void game_area();
 void displayhalloffame();
 void savehall(const HallOfFameEntry entry);
 int load_user_data(HallOfFameEntry *entry);
+void settings();
+void difficulty_level();
+void choose_color();
+// void initialize_map();
+// void create_room(int x, int y, int width, int height);
+// void generate_room(int num_room);
+// void corridor(int start_x, int start_y, int end_x, int end_y);
+// void visibility(int player_x, int player_y);
 int main() {
     initscr();
     start_color();
@@ -43,6 +63,7 @@ int main() {
     keypad(stdscr, TRUE);
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
+    init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
     main_menu();
     endwin();
     return 0;
@@ -53,7 +74,7 @@ void main_menu() {
         "Start playing",
         "Profile",
         "Hall of fame",
-        "Settings"
+        "Settings",
         "Exit",
     };
     int number_of_options = sizeof(options)/ sizeof(options[0]);
@@ -76,17 +97,14 @@ void main_menu() {
         else if (key == KEY_DOWN) choice = (choice+1) % number_of_options;
         else if(key== '\n'){
             if(choice == 0) startplaying();
-            else if(choice ==1){
-
-            } //settings
             else if(choice == 1){
 
             } // profile
             else if(choice == 2){
-                
+                displayhalloffame();
             } //hall of fame
             else if(choice ==3) {
-                //settings
+                settings();
             }
             else if(choice == 4){ 
                 return;
@@ -308,7 +326,6 @@ mvwprintw(win, 5, 2, "                                          ");
     getch();
     delwin(win);
 }
-
 int validate_email(const char *email){
     const char *at = strchr(email, '@');
     const char *dot = strrchr(email, '.');
@@ -399,7 +416,7 @@ void login(){
     mvwprintw(win, 5, 2, "                                                ");
     while(1){
         mvwprintw(win, 6, 2, "Password: ");
-        mvwprintw(win, 6, 12, "                            ");
+        mvwprintw(win, 6, 12, "                           ");
         wrefresh(win);
         i=0;
         memset(password, 0, sizeof(password));
@@ -434,6 +451,12 @@ void login(){
             strcpy(entry.username, current_username);
             getch();
             pre_game_area();
+        }
+        else {
+            wattron(win, COLOR_PAIR(1));
+            mvwprintw(win, 8, 2, "Wrong password! try again");
+            wattroff(win, COLOR_PAIR(1));
+            wrefresh(win);
         }
     }
 }
@@ -537,12 +560,41 @@ void displayhalloffame(){
             if(strcmp(entries[i].username, current_username)==0){
                 attron(A_BOLD);
             }
-            mvprintw(row, 2, "%s - %d - %d gold - %d games - %ld days",
+            if(i==0){
+                wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
+                mvprintw(row, 2, "🥇 legend %s - %d - %d gold - %d games - %ld days",
+                         entries[i].username,
+                         entries[i].score,
+                         entries[i].gold_pieces,
+                         entries[i].games_finished,
+                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+            }
+            else if(i==1){
+                wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
+                mvprintw(row, 2, "🥈 legend %s - %d - %d gold - %d games - %ld days",
+                         entries[i].username,
+                         entries[i].score,
+                         entries[i].gold_pieces,
+                         entries[i].games_finished,
+                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+            }
+            else if(i==2){
+                wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
+                mvprintw(row, 2, "🥉 legend %s - %d - %d gold - %d games - %ld days",
+                         entries[i].username,
+                         entries[i].score,
+                         entries[i].gold_pieces,
+                         entries[i].games_finished,
+                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+            }
+            else {
+                mvprintw(row, 2, "%s - %d - %d gold - %d games - %ld days",
                      entries[i].username,
                      entries[i].score,
                      entries[i].gold_pieces,
                      entries[i].games_finished,
                      (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+        }
                      if(strcmp(entries[i].username, current_username)==0){
                         attroff(A_BOLD);
                      }
@@ -556,11 +608,16 @@ void displayhalloffame(){
     }
     while(key != 27);
 }
+
 void game_area(){
     int gold = 0;
+    clear();
+    mvprintw(1, 2, "This is where messages should appear");
+    refresh();
     /*
     code code code
     */
+   getch();
    HallOfFameEntry entry = {0};
    strcpy(entry.username, current_username);
    if(load_user_data(&entry)){
@@ -592,4 +649,112 @@ int load_user_data(HallOfFameEntry *entry){
     }
     fclose(file);
     return 0;
+}
+void settings(){
+    int choice =0; 
+    char *options[] = {
+        "Difficulty level",
+        "Character color",
+        "Choose a song"
+    };
+    int number_of_options = sizeof(options) / sizeof(options[0]);
+    while(1){
+        clear();
+        for(int i=0; i<number_of_options; i++){
+            if(i==choice){
+                attron(A_REVERSE);
+                mvprintw(3+i, 4, "%s", options[i]);
+                attroff(A_REVERSE);
+            }
+            else{
+                mvprintw(3+i, 4, "%s", options[i]);
+            }
+        }
+        int key = getch();
+        if(key == KEY_UP){
+            choice = (choice - 1 +number_of_options) % number_of_options;
+        }
+        else if(key == KEY_DOWN){
+            choice = (choice+1) % number_of_options;
+        }
+        else if(key == '\n'){
+            if(choice == 0){
+                difficulty_level();
+            }
+            if(choice==1){
+                choose_color();
+            }
+        }
+    }
+}
+void difficulty_level(){
+    int choice =0;
+    char *options[] = {
+        "Easy mode",
+        "Hard mode",
+    };
+    int number_of_options = sizeof(options) / sizeof(options[0]);
+    while (1)
+    {
+        clear();
+        mvprintw(1, 2, "-DIFFICULTY LEVEL-");
+        for(int i=0; i<number_of_options; i++){
+            if(i==choice){
+                attron(A_REVERSE);
+                mvprintw(3+i, 4, "%s", options[i]);
+                attroff(A_REVERSE);
+            }
+            else{
+                mvprintw(3+i, 4, "%s", options[i]);
+            }
+        }
+        int key = getch();
+        if(key == KEY_UP) choice = (choice-1 + number_of_options) % number_of_options;
+        else if(key ==KEY_DOWN) choice = (choice +1) % number_of_options;
+        else if(key =='\n'){
+            if(choice ==0) {
+                strcpy(game_mode, "Easy");
+                return;
+            }
+            else if(choice == 1) {
+                strcpy(game_mode, "Hard");
+                return;
+                }
+        }
+        else if(key == 27) return;
+    }
+    
+}
+void choose_color(){
+    int choice =0;
+    char *options[] = {
+        "Blue",
+        "Magenta",
+        "Green",
+    };
+    int number_of_options = sizeof(options) / sizeof(options[0]);
+    while(1){
+        clear();
+        mvprintw(1, 2, "-CHOOSE A COLOR-");
+        for(int i=0; i<number_of_options; i++){
+            if(i==choice){
+                attron(A_REVERSE);
+                mvprintw(3+i, 4, "%s", options[i]);
+                attroff(A_REVERSE);
+            }
+            else {
+                mvprintw(3+i, 4, "%s", options[i]);
+            }
+        }
+        int key = getch();
+        if(key == KEY_UP) choice = (choice -1 +number_of_options) %number_of_options;
+        if(key==KEY_DOWN) choice = (choice +1 ) % number_of_options;
+        else if(key=='\n'){
+            if(choice == 0) strcpy(character_color, "Blue");
+            else if(choice==1) strcpy(character_color, "Magenta");
+            else if(choice==2) strcpy(character_color, "Green");
+            return;
+        }
+        else if(key == 27) return;
+    }
 }
