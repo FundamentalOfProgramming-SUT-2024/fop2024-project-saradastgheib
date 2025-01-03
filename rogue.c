@@ -3,22 +3,42 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <stdio.h>
 //403105941
 char current_username[50] = "";
 char game_mode[20] = "";
 char character_color[20]= "";
 #define FILENAME "users.txt"
 #define HALLFILE "halloffame.txt"
-#define MAP_WIDTH 50
-#define MAP_HEIGHT 50
-#define WALLVERT '|'
-#define WALLHOR '_'
-#define FLOOR '.'
-#define CORRIDOR '#'
-#define EMTPY ' '
-#define MIN_ROOM_SIZE 4
-#define VISIBLE_DISTANCE 5
-char gamemap[MAP_HEIGHT][MAP_WIDTH];
+#define MAXROW 35
+#define MAXCOL 150
+typedef enum {
+    WALLH = 0, // _
+    FLOOR = 1,
+    DOOR = 2,
+    CORRIDOR = 3,
+    PILLAR = 4,
+    WINDO = 5,
+    EMPTY = 6,
+    WALLV = 7, // |
+    WALLNO = 8
+} map_elements;
+map_elements game_map[MAXROW][MAXCOL];
+map_elements previous[MAXROW][MAXCOL];
+int visible[MAXROW][MAXCOL];
+
+typedef struct {
+    int row;
+    int col;
+} Player;
+Player player;
+typedef struct {
+    int center_x; 
+    int center_y; 
+    int width;    
+    int length;  
+    int visited; 
+} Room;
 typedef struct {
     char username[50];
     char password[50];
@@ -33,6 +53,8 @@ typedef struct {
     int games_finished;
     time_t first_game_time;
 } HallOfFameEntry;
+Room rooms[10];
+int room_index = 0;
 void main_menu ();
 void startplaying();
 void registeruser();
@@ -50,11 +72,16 @@ int load_user_data(HallOfFameEntry *entry);
 void settings();
 void difficulty_level();
 void choose_color();
-// void initialize_map();
-// void create_room(int x, int y, int width, int height);
-// void generate_room(int num_room);
-// void corridor(int start_x, int start_y, int end_x, int end_y);
-// void visibility(int player_x, int player_y);
+void initialize_map();
+void createRoom(int row, int col, int roomRows, int roomCols);
+int itoverlaps(int row, int col, int rowscount, int colscount);
+void createrandomdoor(int row, int col, int roomRows, int roomCols);
+void corridors(int numRooms, Room *rooms);
+void generate_random_map();
+void removeUnconnectedDoors();
+void movePlayer(int newRow, int newCol);
+void printMap();
+void createrandompillar(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
@@ -68,6 +95,7 @@ int main() {
     endwin();
     return 0;
 }
+
 void main_menu() {
     int choice = 0;
     char *options[] = {
@@ -107,7 +135,8 @@ void main_menu() {
                 settings();
             }
             else if(choice == 4){ 
-                return;
+                endwin();
+                exit(0);
         }
     }
     }
@@ -154,7 +183,7 @@ void startplaying(){
                 pre_game_area();
             }
             else if(choice ==3){
-                return;
+                main_menu();
             }
         }
     }
@@ -503,7 +532,7 @@ void pre_game_area(){
                 // prevoius game
             }
             else if(choice ==2){
-                return;
+                startplaying();
             }
         }
     }
@@ -568,6 +597,7 @@ void displayhalloffame(){
                          entries[i].gold_pieces,
                          entries[i].games_finished,
                          (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else if(i==1){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
@@ -577,6 +607,7 @@ void displayhalloffame(){
                          entries[i].gold_pieces,
                          entries[i].games_finished,
                          (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else if(i==2){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
@@ -586,9 +617,11 @@ void displayhalloffame(){
                          entries[i].gold_pieces,
                          entries[i].games_finished,
                          (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else {
-                mvprintw(row, 2, "%s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "%d. %s - %d - %d gold - %d games - %ld days",
+                     i,
                      entries[i].username,
                      entries[i].score,
                      entries[i].gold_pieces,
@@ -614,10 +647,45 @@ void game_area(){
     clear();
     mvprintw(1, 2, "This is where messages should appear");
     refresh();
-    /*
-    code code code
-    */
-   getch();
+    curs_set(0);
+    generate_random_map();
+    removeUnconnectedDoors();
+    while(1){
+        printMap();
+        int ch = getch();
+        switch (ch)
+        {
+        case 'y':
+            movePlayer(player.row -1, player.col -1);
+            break;
+        case 'u':
+            movePlayer(player.row-1, player.col+1);
+            break;
+        case 'h':
+            movePlayer(player.row, player.col-1);
+            break;
+        case 'j':
+            movePlayer(player.row-1, player.col);
+            break;
+        case 'k' :
+            movePlayer(player.row+1, player.col);
+            break;
+        case 'l' :
+            movePlayer(player.row, player.col+1);
+            break;
+        case 'b':
+            movePlayer(player.row+1, player.col-1);
+            break;
+        case 'n':
+            movePlayer(player.row+1, player.col+1);
+            break;
+        case 'q':
+            return;
+        default:
+            break;
+        }
+    }
+    refresh();
    HallOfFameEntry entry = {0};
    strcpy(entry.username, current_username);
    if(load_user_data(&entry)){
@@ -756,5 +824,249 @@ void choose_color(){
             return;
         }
         else if(key == 27) return;
+    }
+}
+void initialize_map(){
+    for(int i=0; i<MAXROW; i++){
+        for(int j=0; j<MAXCOL; j++){
+            visible[i][j]= 0;
+        }
+    }
+    for(int i=0; i<MAXROW; i++){
+        for(int j=0; j<MAXCOL; j++){
+            game_map[i][j] = EMPTY;
+        }
+    }
+}
+void createRoom(int row, int col, int roomRows, int roomCols){
+    for(int i=row+1; i<roomRows+row; i++){
+        for (int j= col+1; j<roomCols+col; j++){
+            game_map[i][j] = FLOOR;
+        }
+    }
+    for(int i= row+1; i<=roomRows+row; i++){
+        game_map[i][col] = WALLV;
+        game_map[i][col+roomCols] = WALLV;
+        previous[i][col] = WALLV;
+        previous[i][col+roomCols] = WALLV;
+    }
+    for(int j=col+1; j<roomCols+col; j++){
+        game_map[row][j] = WALLH;
+        game_map[row+roomRows][j] = WALLH;
+        previous[row][j] = WALLH;
+        previous[row+roomRows][j] = WALLH;
+    }
+    game_map[row][col] = WALLNO;
+    game_map[row][col+roomCols] = WALLNO;
+    previous[row][col] = WALLNO;
+    previous[row][col+roomCols] = WALLNO;
+}
+int itoverlaps(int row, int col, int rowscount, int colscount){
+    if (row + rowscount >= MAXROW-1 || col + colscount >= MAXCOL -1 ) return 1;
+    for(int i= row-2; i<=rowscount+ row+2; i++){
+        for(int j= col-2; j<=colscount+col+2; j++){
+            if(game_map[i][j]!=EMPTY) return 1;
+        }
+    }
+    return 0;
+}
+void createrandomdoor(int row, int col, int roomRows, int roomCols){
+    int doors_placed = 0;
+    int max_retries = ( rand()%3 ) +1;
+    while (max_retries--)
+    {
+        int wall = rand() % 4;
+        int door_row, door_col;
+        switch(wall){
+            case 0:
+            door_row = row;
+            door_col = col + rand() %(roomCols);
+            break;
+            case 1:
+            door_row= row + roomRows;
+            door_col = col+ rand() % (roomCols);
+            break;
+            case 2:
+            door_row = row+ rand()%(roomRows);
+            door_col = col;
+            break;
+            case 3:
+            door_row  = row + rand() % (roomRows);
+            door_col = col + roomCols;
+            break;
+            default:
+            continue;
+        }
+        if (game_map[door_row][door_col] == WALLH || game_map[door_row][door_col] == WALLV && door_row!=0 && door_row!= MAXROW && door_col!=0 && door_col!=MAXCOL && game_map[door_row][door_col] != WALLNO) {
+            game_map[door_row][door_col] = DOOR;
+            doors_placed = 1;
+        }
+    }
+    if( doors_placed ==0 ) createrandomdoor(row, col, roomRows, roomCols);
+    
+}
+void corridors(int numRooms, Room *rooms) {
+    for (int i = 0; i < numRooms - 1; i++) {
+        int x1_pos = rooms[i].center_x;
+        int y1_pos = rooms[i].center_y;
+        int x2_pos = rooms[i + 1].center_x;
+        int y2_pos = rooms[i + 1].center_y;
+        if (game_map[y1_pos][x1_pos] == WALLH || game_map[y1_pos][x1_pos] == WALLV) {
+            game_map[y1_pos][x1_pos] = DOOR;
+        }
+        if (game_map[y2_pos][x2_pos] == WALLH || game_map[y2_pos][x2_pos] == WALLV) {
+            game_map[y2_pos][x2_pos] = DOOR;
+        }
+
+        int currentx = x1_pos;
+        int currenty = y1_pos;
+        while (currentx != x2_pos) {
+            currentx += (currentx < x2_pos) ? 1 : -1;
+            if (game_map[currenty][currentx] == EMPTY) {
+                game_map[currenty][currentx] = CORRIDOR;
+            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV) {
+                game_map[currenty][currentx] = DOOR;
+            }
+        }
+        while (currenty != y2_pos) {
+            currenty += (currenty < y2_pos) ? 1 : -1;
+            if (game_map[currenty][currentx] == EMPTY) {
+                game_map[currenty][currentx] = CORRIDOR;
+            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV) {
+                game_map[currenty][currentx] = DOOR;
+            }
+        }
+    }
+}
+void makeitvisible(int start_row,int start_col,int rowscount,int colscount){
+    for(int i=start_row; i<= rowscount+start_row; i++){
+        for(int j= start_col; j<=colscount + start_col; j++){
+            visible[i][j] = 1;
+        }
+    }
+    player.row = start_row  + 1;
+    player.col = start_col + 1;
+}
+void generate_random_map(){
+    srand(time(NULL));
+    initialize_map();
+    int roomcount = rand() % 5 + 6;
+    int retry_count =0;
+    for(int i=0; i<roomcount; i++){
+        int start_row = rand() % (MAXROW- 9);
+        int start_col = rand() % (MAXCOL-9);
+        int rowscount = rand() % 5 + 5 ;
+        int colscount = rand() % 5 + 5;
+        if(!itoverlaps(start_row, start_col, rowscount, colscount)){
+            createRoom (start_row, start_col, rowscount, colscount);
+            createrandomdoor(start_row, start_col, rowscount, colscount);
+            createrandompillar(start_row, start_col, rowscount, colscount);
+            rooms[room_index].center_x = start_col + colscount/2;
+            rooms[room_index].center_y = start_row + rowscount / 2;
+            rooms[room_index].width = colscount;
+            rooms[room_index].length = rowscount;
+            if(room_index == 0) makeitvisible(start_row, start_col, rowscount, colscount);
+            room_index ++;
+        }
+        else{
+            i--;
+            continue;
+        }
+    }
+    corridors(room_index, rooms);
+    }
+void removeUnconnectedDoors() {
+    for (int i = 0; i < MAXROW; i++) {
+        for (int j = 0; j < MAXCOL; j++) {
+            if (game_map[i][j] == DOOR) {
+                int connected = 0;
+                if (i > 0 && game_map[i - 1][j] == CORRIDOR) connected = 1; // Up
+                if (i < MAXROW - 1 && game_map[i + 1][j] == CORRIDOR) connected = 1; // Down
+                if (j > 0 && game_map[i][j - 1] == CORRIDOR) connected = 1; // Left
+                if (j < MAXCOL - 1 && game_map[i][j + 1] == CORRIDOR) connected = 1; // Right
+
+                if (!connected) {
+                    game_map[i][j] = previous[i][j]; 
+                }
+            }
+        }
+    }
+}
+void movePlayer(int newRow, int newCol) {
+    if (newRow >= 0 && newRow < MAXROW && newCol >= 0 && newCol < MAXCOL &&
+        (game_map[newRow][newCol] == FLOOR || game_map[newRow][newCol] == DOOR || game_map[newRow][newCol] == CORRIDOR)) {
+        player.row = newRow;
+        player.col = newCol;
+    }
+    for(int i = -1; i<=1; i++){
+        for(int j= -3; j<=3; j++){
+            int r= newRow+i, c = newCol+j;
+            if(r>=0 && r<MAXROW && c>= 0 && c <MAXCOL && game_map[newRow][newCol]==CORRIDOR){
+                if(game_map[r][c]== CORRIDOR) visible[r][c]=1;
+            }
+        }
+    }
+    if(game_map[newRow][newCol] == DOOR) {
+        int k=0;
+        for(int i=0; game_map[newRow + i][newCol]!= EMPTY && game_map[newRow + i][newCol]!= CORRIDOR; i++){
+            k++;
+        }
+        int end_row = newRow + k ;
+        k =0;
+        for(int i=0; game_map[newRow + i][newCol]!= EMPTY && game_map[newRow+i][newCol]!= CORRIDOR; i--){
+            k++;
+        }
+        int start_row = newRow - k;
+        k= 0;
+        for(int i=0; game_map[newRow][newCol+i]!= EMPTY && game_map[newRow][newCol+i]!= CORRIDOR; i++){
+            k++;
+        }
+        int end_column = newCol + k ;
+        k=0;
+        for(int i=0; game_map[newRow][newCol+i]!= EMPTY && game_map[newRow][newCol+i]!= CORRIDOR; i--){
+            k++;
+        }
+        int start_column = newCol - k;
+
+        for(int i=start_row; i<end_row; i++){
+            for(int j= start_column; j< end_column; j++){
+                visible[i][j] = 1;
+            }
+        }
+    }
+}
+void printMap() {
+    clear(); 
+
+    for (int i = 0; i < MAXROW; i++) {
+        for (int j = 0; j < MAXCOL; j++) {
+            
+            if(visible[i][j]){
+                switch (game_map[i][j]) {
+                case WALLV: mvaddch(i, j, '|'); break;
+                case FLOOR: mvaddch(i, j, '.'); break;
+                case DOOR: mvaddch(i, j, '+'); break;
+                case CORRIDOR: mvaddch(i, j, '#'); break;
+                case PILLAR: mvaddch(i, j, 'O'); break;
+                case WINDO: mvaddch(i, j, '='); break;
+                case EMPTY: mvaddch(i, j, ' '); break;
+                case WALLH: mvaddch(i, j, '_'); break;
+                case WALLNO: mvaddch(i, j, ' '); break;
+                default: mvaddch(i, j, ' '); break;
+            }
+            }
+        }
+    }
+    mvaddch(player.row, player.col, 'P'); 
+    refresh();
+}
+void createrandompillar(int row, int col, int roomRows, int roomCols){
+    int number_of_pillars = rand() % 2 ;
+    while(number_of_pillars --){
+        // row+1 ta row+roomrows-1
+        // col+1 ta col +roomcols -1
+        int rown = ( rand() %(roomRows-2) ) +row+1;
+        int coln = (rand() % (roomCols-2)) +col +1;
+        game_map[rown][coln] = PILLAR;
     }
 }
