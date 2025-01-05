@@ -1005,39 +1005,63 @@ void createrandomdoor(int row, int col, int roomRows, int roomCols){
     if( doors_placed ==0 ) createrandomdoor(row, col, roomRows, roomCols);
     
 }
+void place_door(int row, int col) {
+    if (rand()%20 == 0) {
+        game_map[row][col] = (game_map[row][col] == WALLH) ? SWALLH :
+                             (game_map[row][col] == WALLV) ? SWALLV :
+                             SWALLNO;
+    } else if (rand() % 13 == 0) { 
+        game_map[row][col] = PASSWORDDOOR;
+        int start_row = row, end_row = row, start_col = col, end_col = col;
+        while (start_row > 0 && game_map[start_row - 1][col] != EMPTY && game_map[start_row - 1][col] != CORRIDOR ) start_row--;
+        while (end_row < MAXROW - 1 && game_map[end_row + 1][col] != EMPTY && game_map[end_row + 1][col] != CORRIDOR ) end_row++;
+        while (start_col > 0 && game_map[row][start_col - 1] != EMPTY && game_map[row][start_col - 1] != CORRIDOR) start_col--;
+        while (end_col < MAXCOL - 1 && game_map[row][end_col + 1] != EMPTY && game_map[row][end_col + 1] != CORRIDOR) end_col++;
+        int room_rows = end_row - start_row + 1;
+        int room_cols = end_col - start_col + 1;
+        placepassword(start_row, start_col, room_rows, room_cols);
+    } else { 
+        game_map[row][col] = DOOR;
+    }
+}
+
 void corridors(int numRooms, Room *rooms) {
     for (int i = 0; i < numRooms - 1; i++) {
         int x1_pos = rooms[i].center_x;
         int y1_pos = rooms[i].center_y;
         int x2_pos = rooms[i + 1].center_x;
         int y2_pos = rooms[i + 1].center_y;
-        if (game_map[y1_pos][x1_pos] == WALLH || game_map[y1_pos][x1_pos] == WALLV) {
-            game_map[y1_pos][x1_pos] = DOOR;
+
+        // Place initial doors if applicable
+        if (game_map[y1_pos][x1_pos] == WALLH || game_map[y1_pos][x1_pos] == WALLV || game_map[y1_pos][x1_pos] == WALLNO) {
+            place_door(y1_pos, x1_pos);
         }
-        if (game_map[y2_pos][x2_pos] == WALLH || game_map[y2_pos][x2_pos] == WALLV) {
-            game_map[y2_pos][x2_pos] = DOOR;
+        if (game_map[y2_pos][x2_pos] == WALLH || game_map[y2_pos][x2_pos] == WALLV || game_map[y2_pos][x2_pos] == WALLNO) {
+            place_door(y2_pos, x2_pos);
         }
 
+        // Create corridors
         int currentx = x1_pos;
         int currenty = y1_pos;
         while (currentx != x2_pos) {
             currentx += (currentx < x2_pos) ? 1 : -1;
             if (game_map[currenty][currentx] == EMPTY) {
                 game_map[currenty][currentx] = CORRIDOR;
-            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV) {
-                game_map[currenty][currentx] = DOOR;
+            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV || game_map[currenty][currentx] == WALLNO) {
+                place_door(currenty, currentx);
             }
         }
         while (currenty != y2_pos) {
             currenty += (currenty < y2_pos) ? 1 : -1;
             if (game_map[currenty][currentx] == EMPTY) {
                 game_map[currenty][currentx] = CORRIDOR;
-            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV) {
-                game_map[currenty][currentx] = DOOR;
+            } else if (game_map[currenty][currentx] == WALLH || game_map[currenty][currentx] == WALLV || game_map[currenty][currentx] == WALLNO) {
+                place_door(currenty, currentx);
             }
         }
     }
 }
+
 void makeitvisible(int start_row,int start_col,int rowscount,int colscount){
     for(int i=start_row; i<= rowscount+start_row; i++){
         for(int j= start_col; j<=colscount + start_col; j++){
@@ -1059,7 +1083,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     room_index = 0;
     if (staircase_row > 0 && staircase_col > 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
-        createrandomdoor(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
+        //createrandomdoor(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         createrandompillar(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         makeitvisible(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         rooms[room_index].center_x = staircase_col + staircase_roomCols / 2;
@@ -1102,7 +1126,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
 void removeUnconnectedDoors() {
     for (int i = 0; i < MAXROW; i++) {
         for (int j = 0; j < MAXCOL; j++) {
-            if (game_map[i][j] == DOOR) {
+            if (game_map[i][j] == DOOR || game_map[i][j] == PASSWORDDOOR || game_map[i][j]== SWALLH || game_map[i][j] == SWALLV || game_map[i][j] == SWALLNO) {
                 int connected = 0;
                 if (i > 0 && game_map[i - 1][j] == CORRIDOR) connected = 1; // Up
                 if (i < MAXROW - 1 && game_map[i + 1][j] == CORRIDOR) connected = 1; // Down
