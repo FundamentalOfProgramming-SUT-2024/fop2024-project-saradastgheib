@@ -4,6 +4,9 @@
 #include <ctype.h>
 #include <time.h>
 #include <stdio.h>
+#include <locale.h>
+#include <wchar.h>     
+
 //403105941
 char current_username[50] = "";
 char game_mode[20] = "";
@@ -28,7 +31,8 @@ typedef enum {
     SWALLV = 12,
     SWALLNO = 13,
     PASSWORDDOOR = 14,
-    PASSWORD = 15 // &
+    PASSWORD = 15, // &
+    ANCIENTKEY = 16
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -47,11 +51,12 @@ typedef struct {
 // Stairs stairs[4];
 Floor floors[4];
 int current_floor = 0;
-
+char pass[5];
 typedef struct {
     int row;
     int col;
     int health;
+    int ancientkeys;
 } Player;
 Player player;
 typedef struct {
@@ -110,17 +115,26 @@ void placestaircase(int row, int col, int roomRows, int roomCols);
 void saveFloor();
 void loadFloor(int floor);
 void placepassword(int row, int col, int roomRows, int roomCols);
+void generatedoorpass();
+void removepassword(int row, int col, int roomRows, int roomCols);
+void placeancientkey(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
+    //setlocale(LC_ALL, ""); 
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(4, COLOR_BLUE, COLOR_BLACK);
     init_pair(5, COLOR_YELLOW, COLOR_BLACK);
+    // if (can_change_color()) {
+    //     init_color(COLOR_RED + 1, 1000, 647, 0); 
+    // }
+
+    // init_pair(6, COLOR_RED + 1, COLOR_BLACK); 
     main_menu();
     endwin();
     return 0;
@@ -285,15 +299,15 @@ mvwprintw(win, 5, 2, "                                          ");
         memset(password, 0, sizeof(password));
         while (1) {
             ch = wgetch(win);
-            if (ch == '\n') { // Enter completes the input
+            if (ch == '\n') { 
                 break;
-            } else if (ch == KEY_BACKSPACE || ch == 127) { // Handle backspace
+            } else if (ch == KEY_BACKSPACE || ch == 127) { 
                 if (i > 0) {
                     i--;
                     mvwaddch(win, 6, 12 + i, ' ');
                     wmove(win, 6, 12 + i);
                 }
-            } else if (i < 49 && isprint(ch)) { // Add valid printable character
+            } else if (i < 49 && isprint(ch)) { 
                 password[i++] = ch;
                 mvwaddch(win, 6, 12 + i - 1, '*');
             }
@@ -692,6 +706,9 @@ void printall() {
                 case SWALLH: mvaddch(i, j, 'D'); break;
                 case SWALLV: mvaddch(i, j, 'D'); break;
                 case SWALLNO: mvaddch(i, j, 'D'); break;
+                case ANCIENTKEY:  
+                    mvaddch(i, j, '^');  
+                     break;
                 case PASSWORD:
                     attron(COLOR_PAIR(5));
                     mvaddch(i, j, '&');
@@ -727,6 +744,7 @@ void game_area(){
     refresh();
     curs_set(0);
     player.health = 5;
+    player.ancientkeys = 0;
     generate_random_map(0, 0, 0, 0);
     removeUnconnectedDoors();
     while(1){
@@ -1078,6 +1096,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     int roomcount = rand() % 5 + 6;
     int traproom = rand() % roomcount;
     int stairroom = rand() % roomcount;
+    int ancientkeyroom = rand() % roomcount;
     int retry_count = 0;
 
     room_index = 0;
@@ -1107,6 +1126,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
             rooms[room_index].center_y = start_row + rowscount / 2;
             rooms[room_index].width = colscount;
             rooms[room_index].length = rowscount;
+            if(room_index == ancientkeyroom) placeancientkey(start_row, start_col, rowscount, colscount);
             if(room_index == 0 && current_floor == 0) {
                 player.row = start_row + 1;
                 player.col = start_col + 1;
@@ -1134,7 +1154,18 @@ void removeUnconnectedDoors() {
                 if (j < MAXCOL - 1 && game_map[i][j + 1] == CORRIDOR) connected = 1; // Right
 
                 if (!connected) {
+                    if(game_map[i][j] == PASSWORDDOOR){
+                        int start_row = i, end_row = i, start_col = j, end_col = j;
+                        while (start_row > 0 && game_map[start_row - 1][j] != EMPTY && game_map[start_row - 1][j] != CORRIDOR ) start_row--;
+                        while (end_row < MAXROW - 1 && game_map[end_row + 1][j] != EMPTY && game_map[end_row + 1][j] != CORRIDOR ) end_row++;
+                        while (start_col > 0 && game_map[i][start_col - 1] != EMPTY && game_map[i][start_col - 1] != CORRIDOR) start_col--;
+                        while (end_col < MAXCOL - 1 && game_map[i][end_col + 1] != EMPTY && game_map[i][end_col + 1] != CORRIDOR) end_col++;
+                        int room_rows = end_row - start_row + 1;
+                        int room_cols = end_col - start_col + 1;
+                        removepassword(start_row, start_col, room_rows, room_cols);
+                             }
                     game_map[i][j] = previous[i][j]; 
+                    
                 }
             }
         }
@@ -1155,6 +1186,77 @@ void movePlayer(int newRow, int newCol) {
             }
         }
     }
+    if(game_map[newRow][newCol] == ANCIENTKEY) {
+        player.ancientkeys ++;
+        game_map[newRow][newCol] = FLOOR;
+    }
+    if (game_map[newRow][newCol] == PASSWORD) {
+    generatedoorpass();
+    mvprintw(1, 75, "%s", pass);
+    refresh();
+    napms(10000);
+}
+
+if (game_map[newRow][newCol] == PASSWORDDOOR) {
+    if (unlocked[newRow][newCol]) {
+        player.row = newRow;
+        player.col = newCol;
+    } else {
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "This door is locked! If you have the password, enter it. If you don't, press q!");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        
+        char input[5] = {0};
+        int retries = 3;
+        
+        while (retries--) {
+            int correct = 1;
+            
+            for (int i = 0; i < 4; i++) {
+                int ch = getch();
+                if (ch == 'q') {
+                    return; 
+                }
+                
+                input[i] = ch; 
+                
+            }
+            input[4] = '\0';
+            if (strcmp(input, pass)!= 0) {
+                    correct = 0;
+                }
+            if (correct) {
+                attron(COLOR_PAIR(2));
+                mvprintw(1, 2, "                                                                                  ");
+                mvprintw(1, 2, "You unlocked the door!");
+                attroff(COLOR_PAIR(2));
+                refresh();
+                unlocked[newRow][newCol] = 1;
+                break;
+            } else {
+                if (retries == 2) {
+                    attron(COLOR_PAIR(5));
+                    mvprintw(1, 2, "                                                                                  ");
+                    mvprintw(1, 2, "Wrong password! Try again! The password you entered: %s, the actual password: %s", input, pass);
+                    attroff(COLOR_PAIR(5));
+                    refresh();
+                }
+                if (retries == 1) {
+                    attron(COLOR_PAIR(6));
+                    mvprintw(1, 2, "                                                                                  ");
+                    mvprintw(1, 2, "Wrong password! Try again!");
+                    attroff(COLOR_PAIR(6));
+                    refresh();
+                }
+                if (retries == 0) {
+                    break;
+                }
+            }
+        }
+    }
+}
+
     if(game_map[newRow][newCol] == TRAP) battleroom();
     if (game_map[newRow][newCol] == STAIRCASE && current_floor == 0) {
         saveFloor();
@@ -1224,6 +1326,10 @@ void printMap() {
                 case SWALLH: mvaddch(i, j, '_'); break;
                 case SWALLV: mvaddch(i, j, '|'); break;
                 case SWALLNO: mvaddch(i, j, ' '); break;
+                case ANCIENTKEY:  
+                    mvaddch(i, j, 0xCE);   
+                    mvaddch(i, j+1, 0x94);
+                     break;
                 case PASSWORD:
                     attron(COLOR_PAIR(5));
                     mvaddch(i, j, '&');
@@ -1321,4 +1427,32 @@ void placepassword(int row, int col, int roomRows, int roomCols){
         game_map[rown][coln] = PASSWORD;
     }
     else placepassword(row, col, roomRows, roomCols);
+}
+void generatedoorpass() {
+    pass[0] = (rand() % 9) + '0'; 
+    pass[1] = (rand() % 9) + '0';
+    pass[2] = (rand() % 9) + '0';
+    pass[3] = (rand() % 9) + '0';
+    pass[4] = '\0'; 
+}
+void removepassword(int row, int col, int roomRows, int roomCols){
+    int found = 0;
+for (int i = row; i <= row + roomRows && !found; i++) {
+    for (int j = col; j <= col + roomCols; j++) {
+        if (game_map[i][j] == PASSWORD) {
+            game_map[i][j] = FLOOR;
+            found = 1;
+            break; 
+        }
+    }
+}
+
+}
+void placeancientkey(int row, int col, int roomRows, int roomCols){
+    int rown = (rand() %(roomRows-2)) + row +1;
+    int coln = (rand() % (roomCols-2)) + col +1;
+    if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = ANCIENTKEY;
+    else{
+        placeancientkey(row, col, roomRows, roomCols);
+    }
 }
