@@ -57,6 +57,7 @@ typedef struct {
     int col;
     int health;
     int ancientkeys;
+    int brokenkeys;
 } Player;
 Player player;
 typedef struct {
@@ -129,7 +130,10 @@ int main() {
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(4, COLOR_BLUE, COLOR_BLACK);
+    //init_color(COLOR_CYAN, 255, 255, 0);  
+    init_pair(4, COLOR_CYAN, COLOR_BLACK);
     init_pair(5, COLOR_YELLOW, COLOR_BLACK);
+    
     // if (can_change_color()) {
     //     init_color(COLOR_RED + 1, 1000, 647, 0); 
     // }
@@ -745,11 +749,14 @@ void game_area(){
     curs_set(0);
     player.health = 5;
     player.ancientkeys = 0;
+    player.brokenkeys = 0;
     generate_random_map(0, 0, 0, 0);
     removeUnconnectedDoors();
     while(1){
         printMap();
-        mvprintw(30, 50, "Health = %d", player.health);
+        mvprintw(35, 10, "Health = %d", player.health);
+        mvprintw(35, 60, "ancient keys = %d", player.ancientkeys);
+        mvprintw(35, 110, "broken keys = %d", plauer.brokenkeys);
         refresh();
 
         int ch = getch();
@@ -779,6 +786,11 @@ void game_area(){
         case 'n':
             movePlayer(player.row+1, player.col+1);
             break;
+        case 'a':
+            if(player.brokenkeys >= 2){
+                player.ancientkeys ++;
+                player.brokenkeys = player.brokenkeys -2;
+            }
         case 'q':
             return;
         case 'm':
@@ -1049,16 +1061,12 @@ void corridors(int numRooms, Room *rooms) {
         int y1_pos = rooms[i].center_y;
         int x2_pos = rooms[i + 1].center_x;
         int y2_pos = rooms[i + 1].center_y;
-
-        // Place initial doors if applicable
         if (game_map[y1_pos][x1_pos] == WALLH || game_map[y1_pos][x1_pos] == WALLV || game_map[y1_pos][x1_pos] == WALLNO) {
             place_door(y1_pos, x1_pos);
         }
         if (game_map[y2_pos][x2_pos] == WALLH || game_map[y2_pos][x2_pos] == WALLV || game_map[y2_pos][x2_pos] == WALLNO) {
             place_door(y2_pos, x2_pos);
         }
-
-        // Create corridors
         int currentx = x1_pos;
         int currenty = y1_pos;
         while (currentx != x2_pos) {
@@ -1201,9 +1209,36 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
     if (unlocked[newRow][newCol]) {
         player.row = newRow;
         player.col = newCol;
-    } else {
+    } 
+    
+    
+    if(!unlocked[newRow][newCol]){
+        int random =rand()%10 ;
+        if(player.ancientkeys == 1 && random%10 !=0) {
+                attron(COLOR_PAIR(2));
+                mvprintw(1, 2, "                                                                                  ");
+                mvprintw(1, 2, "You unlocked the door!");
+                attroff(COLOR_PAIR(2));
+                refresh();
+                unlocked[newRow][newCol] = 1;
+                player.row = newRow;
+                player.col = newCol;
+                getch();
+        }
+        if(player.ancientkeys== 1 && random%10 == 0 ){
+            attron(COLOR_PAIR(2));
+            mvprintw(1, 2, "                                                                                  ");
+            mvprintw(1, 2, "You broke your ancient key:(  if you have two broken ancient keys press a");    
+            attroff(COLOR_PAIR(2));
+            refresh();
+            player.ancientkeys --;
+            player.brokenkeys ++;
+            getch();
+        }
+        if(!unlocked[newRow][newCol]){
         attron(COLOR_PAIR(1));
-        mvprintw(1, 2, "This door is locked! If you have the password, enter it. If you don't, press q!");
+        mvprintw(1, 2, "                                                                                  ");
+        mvprintw(1, 2, "This door is locked! If you dont have the password press q!");
         attroff(COLOR_PAIR(1));
         refresh();
         
@@ -1233,6 +1268,7 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
                 attroff(COLOR_PAIR(2));
                 refresh();
                 unlocked[newRow][newCol] = 1;
+                getch();
                 break;
             } else {
                 if (retries == 2) {
@@ -1243,16 +1279,17 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
                     refresh();
                 }
                 if (retries == 1) {
-                    attron(COLOR_PAIR(6));
                     mvprintw(1, 2, "                                                                                  ");
-                    mvprintw(1, 2, "Wrong password! Try again!");
-                    attroff(COLOR_PAIR(6));
+                    attron(COLOR_PAIR(1));
+                    mvprintw(10, 10, "Wrong password! Try again!");
+                    attroff(COLOR_PAIR(1));
                     refresh();
                 }
                 if (retries == 0) {
                     break;
                 }
             }
+        }
         }
     }
 }
@@ -1261,10 +1298,10 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
     if (game_map[newRow][newCol] == STAIRCASE && current_floor == 0) {
         saveFloor();
         int start_row = newRow, end_row = newRow, start_col = newCol, end_col = newCol;
-        while (start_row > 0 && game_map[start_row - 1][newCol] != EMPTY) start_row--;
-        while (end_row < MAXROW - 1 && game_map[end_row + 1][newCol] != EMPTY) end_row++;
-        while (start_col > 0 && game_map[newRow][start_col - 1] != EMPTY) start_col--;
-        while (end_col < MAXCOL - 1 && game_map[newRow][end_col + 1] != EMPTY) end_col++;
+        while (start_row > 0 && game_map[start_row - 1][newCol] != EMPTY && game_map[start_row - 1][newCol] !=CORRIDOR) start_row--;
+        while (end_row < MAXROW - 1 && game_map[end_row + 1][newCol] != EMPTY && game_map[end_row + 1][newCol] != CORRIDOR) end_row++;
+        while (start_col > 0 && game_map[newRow][start_col - 1] != EMPTY && game_map[newRow][start_col - 1] != CORRIDOR) start_col--;
+        while (end_col < MAXCOL - 1 && game_map[newRow][end_col + 1] != EMPTY && game_map[newRow][end_col + 1] != CORRIDOR) end_col++;
         int room_rows = end_row - start_row + 1;
         int room_cols = end_col - start_col + 1;
         current_floor++;
@@ -1275,7 +1312,9 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
     }
 
 
-    if(game_map[newRow][newCol] == DOOR) {
+    if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
+    || game_map[newRow][newCol]==SWALLV || game_map[newRow][newCol]==SWALLNO
+    || game_map[newRow][newCol]==PASSWORDDOOR) {
         int k=0;
         for(int i=0; game_map[newRow + i][newCol]!= EMPTY && game_map[newRow + i][newCol]!= CORRIDOR; i++){
             k++;
@@ -1326,9 +1365,10 @@ void printMap() {
                 case SWALLH: mvaddch(i, j, '_'); break;
                 case SWALLV: mvaddch(i, j, '|'); break;
                 case SWALLNO: mvaddch(i, j, ' '); break;
-                case ANCIENTKEY:  
-                    mvaddch(i, j, 0xCE);   
-                    mvaddch(i, j+1, 0x94);
+                case ANCIENTKEY: 
+                    attron(COLOR_PAIR(5));
+                    mvaddch(i, j, '^');
+                    attroff(COLOR_PAIR(4));
                      break;
                 case PASSWORD:
                     attron(COLOR_PAIR(5));
