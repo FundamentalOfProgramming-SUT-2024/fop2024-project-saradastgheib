@@ -32,24 +32,22 @@ typedef enum {
     SWALLNO = 13,
     PASSWORDDOOR = 14,
     PASSWORD = 15, // &
-    ANCIENTKEY = 16
+    ANCIENTKEY = 16,
+    REVEALEDTRAP = 17,
+    HEALTH_POTION = 18,
+    SPEED_POTION = 19,
+    DAMAGE_POTION = 20,
+    END = 21
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
 int visible[MAXROW][MAXCOL];
 int unlocked[MAXROW][MAXCOL];
+int type[MAXROW][MAXCOL];
 typedef struct {
     char map[MAXROW][MAXCOL];
     int player_row, player_col;
 } Floor;
-// typedef struct{
-//     firstfloor;
-//     secondfloor;
-//     row;
-//     col;
-// } Stairs;
-// Stairs stairs[4];
-Floor floors[4];
 int current_floor = 0;
 char pass[5];
 typedef struct {
@@ -58,6 +56,9 @@ typedef struct {
     int health;
     int ancientkeys;
     int brokenkeys;
+    int hps;
+    int dps;
+    int sps;
 } Player;
 Player player;
 typedef struct {
@@ -81,6 +82,7 @@ typedef struct {
     int games_finished;
     time_t first_game_time;
 } HallOfFameEntry;
+HallOfFameEntry entry = {0};
 Room rooms[10];
 int room_index = 0;
 void main_menu ();
@@ -103,7 +105,6 @@ void choose_color();
 void initialize_map();
 void createRoom(int row, int col, int roomRows, int roomCols);
 int itoverlaps(int row, int col, int rowscount, int colscount);
-void createrandomdoor(int row, int col, int roomRows, int roomCols);
 void placetrap(int row, int col, int roomRows, int roomCols);
 void corridors(int numRooms, Room *rooms);
 void generate_random_map(int staircase_row, int staircase_col, int staircase_roomRows, int staircase_roomCols);
@@ -113,18 +114,21 @@ void printMap();
 void createrandompillar(int row, int col, int roomRows, int roomCols);
 int battleroom();
 void placestaircase(int row, int col, int roomRows, int roomCols);
-void saveFloor();
-void loadFloor(int floor);
 void placepassword(int row, int col, int roomRows, int roomCols);
 void generatedoorpass();
 void removepassword(int row, int col, int roomRows, int roomCols);
 void placeancientkey(int row, int col, int roomRows, int roomCols);
+void placepotions(int row, int col, int roomRows, int roomCols);
+void make_it_treasure(int row, int col, int roomRows, int roomCols);
+void trapsfortreasure(int row, int col, int roomRows, int roomCols);
+void endpoint(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
+    nodelay(stdscr, TRUE);
     //setlocale(LC_ALL, ""); 
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
@@ -132,13 +136,7 @@ int main() {
     init_pair(4, COLOR_BLUE, COLOR_BLACK);
     //init_color(COLOR_CYAN, 255, 255, 0);  
     init_pair(4, COLOR_CYAN, COLOR_BLACK);
-    init_pair(5, COLOR_YELLOW, COLOR_BLACK);
-    
-    // if (can_change_color()) {
-    //     init_color(COLOR_RED + 1, 1000, 647, 0); 
-    // }
-
-    // init_pair(6, COLOR_RED + 1, COLOR_BLACK); 
+    init_pair(5, COLOR_YELLOW, COLOR_BLACK); 
     main_menu();
     endwin();
     return 0;
@@ -226,7 +224,7 @@ void startplaying(){
             }
             else if(choice==2) {
                 strcpy(current_username, "Guest");
-                HallOfFameEntry entry = {0};
+                //HallOfFameEntry entry = {0};
                 strcpy(entry.username, current_username);
                 pre_game_area();
             }
@@ -524,7 +522,7 @@ void login(){
             mvwprintw(win, 8, 2, "Login successful");
             wattroff(win, COLOR_PAIR(2));
             wrefresh(win);
-            HallOfFameEntry entry = {0};
+            //HallOfFameEntry entry = {0};
             strcpy(entry.username, current_username);
             getch();
             pre_game_area();
@@ -585,12 +583,51 @@ void pre_game_area(){
         }
     }
 }
-void savehall(const HallOfFameEntry entry){
-    FILE *file = fopen(HALLFILE, "a");
-    if(!file) {
+void savehall(const HallOfFameEntry entry) {
+    HallOfFameEntry entries[100];
+    int count = 0;
+    int updated = 0;
+    FILE *file = fopen(HALLFILE, "r");
+    if (file) {
+        while (fscanf(file, "%s %d %d %d %ld",
+                      entries[count].username,
+                      &entries[count].score,
+                      &entries[count].gold_pieces,
+                      &entries[count].games_finished,
+                      &entries[count].first_game_time) == 5) {
+            if (strcmp(entries[count].username, entry.username) == 0) {
+                entries[count].score = entry.score;
+                entries[count].gold_pieces = entry.gold_pieces;
+                entries[count].games_finished = entry.games_finished;
+                entries[count].first_game_time = entry.first_game_time;
+                updated = 1;
+            }
+            count++;
+        }
+        fclose(file);
+    }
+    if (!updated) {
+        if (count < 100) { 
+            entries[count++] = entry;
+        } else {
+            fprintf(stderr, "Error: Too many entries in the hall of fame.\n");
+            return;
+        }
+    }
+    file = fopen(HALLFILE, "w");
+    if (!file) {
+        fprintf(stderr, "Error: Could not open file for writing.\n");
         return;
     }
-    fprintf(file, "%s %d %d %d %ld\n", entry.username, entry.score, entry.gold_pieces, entry.games_finished, entry.first_game_time);
+    for (int i = 0; i < count; i++) {
+        fprintf(file, "%s %d %d %d %ld\n",
+                entries[i].username,
+                entries[i].score,
+                entries[i].gold_pieces,
+                entries[i].games_finished,
+                entries[i].first_game_time);
+    }
+
     fclose(file);
 }
 void displayhalloffame(){
@@ -750,13 +787,17 @@ void game_area(){
     player.health = 5;
     player.ancientkeys = 0;
     player.brokenkeys = 0;
-    generate_random_map(0, 0, 0, 0);
+    strcpy(entry.username, current_username);
+    current_floor = 0;
+    //HallOfFameEntry entry = {0};
+    generate_random_map(-1, -1, 0, 0);
     removeUnconnectedDoors();
     while(1){
         printMap();
         mvprintw(35, 10, "Health = %d", player.health);
-        mvprintw(35, 60, "ancient keys = %d", player.ancientkeys);
-        mvprintw(35, 110, "broken keys = %d", plauer.brokenkeys);
+        mvprintw(35, 40, "ancient keys = %d", player.ancientkeys);
+        mvprintw(35, 70, "broken keys = %d", player.brokenkeys);
+        mvprintw(35, 100, "Total score: %d", entry.score);
         refresh();
 
         int ch = getch();
@@ -800,20 +841,20 @@ void game_area(){
         }
     }
     refresh();
-   HallOfFameEntry entry = {0};
-   strcpy(entry.username, current_username);
-   if(load_user_data(&entry)){
-    entry.score = entry.score + 100;
-    entry.gold_pieces = entry.gold_pieces + gold;
-    entry.games_finished = entry.games_finished +1 ;
-   }
-   else {
-    entry.score = 100;
-    entry.gold_pieces = gold;
-    entry.games_finished = 1;
-    entry.first_game_time = time(NULL);
-   }
-   savehall(entry);
+   
+//    strcpy(entry.username, current_username);
+//    if(load_user_data(&entry)){
+//     entry.score = entry.score + 100;
+//     entry.gold_pieces = entry.gold_pieces + gold;
+//     entry.games_finished = entry.games_finished +1 ;
+//    }
+//    else {
+//     entry.score = 100;
+//     entry.gold_pieces = gold;
+//     entry.games_finished = 1;
+//     entry.first_game_time = time(NULL);
+//    }
+//    savehall(entry);
 }
 int load_user_data(HallOfFameEntry *entry){
     FILE *file = fopen(HALLFILE, "r");
@@ -989,52 +1030,6 @@ int itoverlaps(int row, int col, int rowscount, int colscount){
     }
     return 0;
 }
-void createrandomdoor(int row, int col, int roomRows, int roomCols){
-    int doors_placed = 0;
-    int max_retries = ( rand()%3 ) +1;
-    while (max_retries--)
-    {
-        int wall = rand() % 4;
-        int door_row, door_col;
-        switch(wall){
-            case 0:
-            door_row = row;
-            door_col = col + rand() %(roomCols);
-            break;
-            case 1:
-            door_row= row + roomRows;
-            door_col = col+ rand() % (roomCols);
-            break;
-            case 2:
-            door_row = row+ rand()%(roomRows);
-            door_col = col;
-            break;
-            case 3:
-            door_row  = row + rand() % (roomRows);
-            door_col = col + roomCols;
-            break;
-            default:
-            continue;
-        }
-        if (game_map[door_row][door_col] == WALLH || game_map[door_row][door_col] == WALLV && door_row!=0 && door_row!= MAXROW && door_col!=0 && door_col!=MAXCOL && game_map[door_row][door_col] != WALLNO) {
-            if(rand()%20 == 0){
-                if(game_map[door_row][door_col] == WALLH) game_map[door_row][door_col] = SWALLH;
-                if(game_map[door_row][door_col] == WALLV) game_map[door_row][door_col] = SWALLV;
-                if(game_map[door_row][door_col == WALLNO]) game_map[door_row][door_col] = SWALLNO;
-            }
-            else if(rand()% 13 == 0){
-                game_map[door_row][door_col] = PASSWORDDOOR;
-                placepassword(row, col, roomRows, roomCols);
-            }
-            else {
-                game_map[door_row][door_col] = DOOR;
-            }
-            doors_placed = 1;
-        }
-    }
-    if( doors_placed ==0 ) createrandomdoor(row, col, roomRows, roomCols);
-    
-}
 void place_door(int row, int col) {
     if (rand()%20 == 0) {
         game_map[row][col] = (game_map[row][col] == WALLH) ? SWALLH :
@@ -1103,13 +1098,15 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
 
     int roomcount = rand() % 5 + 6;
     int traproom = rand() % roomcount;
-    int stairroom = rand() % roomcount;
+    int stairroom = rand() % (roomcount-1) + 1;
     int ancientkeyroom = rand() % roomcount;
     int retry_count = 0;
-
+    int g = 0;
     room_index = 0;
-    if (staircase_row > 0 && staircase_col > 0) {
+    //mvprintw(1,2, "im here");
+    if (staircase_row >= 0 && staircase_col >= 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
+        placepotions(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         //createrandomdoor(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         createrandompillar(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         makeitvisible(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
@@ -1117,10 +1114,15 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
         rooms[room_index].center_y = staircase_row + staircase_roomRows / 2;
         rooms[room_index].width = staircase_roomCols;
         rooms[room_index].length = staircase_roomRows;
-        game_map[player.row][player.col] = STAIRCASE;
+        //game_map[player.row][player.col] = STAIRCASE;
         room_index++;
+        g =1;
     }
     for (int i = 0; i < roomcount; i++) {
+        if(g){
+            g=0; 
+            roomcount --;
+        }
         int start_row = rand() % (MAXROW - 9);
         int start_col = rand() % (MAXCOL - 9);
         int rowscount = rand() % 5 + 5;
@@ -1128,7 +1130,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
 
         if (!itoverlaps(start_row, start_col, rowscount, colscount)) {
             createRoom(start_row, start_col, rowscount, colscount);
-            createrandomdoor(start_row, start_col, rowscount, colscount);
+            //createrandomdoor(start_row, start_col, rowscount, colscount);
             createrandompillar(start_row, start_col, rowscount, colscount);
             rooms[room_index].center_x = start_col + colscount / 2;
             rooms[room_index].center_y = start_row + rowscount / 2;
@@ -1141,7 +1143,8 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
                 makeitvisible(start_row, start_col, rowscount, colscount);
             }
             if (room_index == traproom) placetrap(start_row, start_col, rowscount, colscount);
-            if (room_index == stairroom && current_floor== 0) placestaircase(start_row, start_col, rowscount, colscount);
+            if (room_index == stairroom && current_floor!=3 ) placestaircase(start_row, start_col, rowscount, colscount);
+            if(room_index == stairroom && current_floor == 3) make_it_treasure(start_row, start_col, rowscount, colscount);
             room_index++;
         } else {
             i--;
@@ -1197,6 +1200,8 @@ void movePlayer(int newRow, int newCol) {
     if(game_map[newRow][newCol] == ANCIENTKEY) {
         player.ancientkeys ++;
         game_map[newRow][newCol] = FLOOR;
+        player.row = newRow;
+        player.col = newCol;
     }
     if (game_map[newRow][newCol] == PASSWORD) {
     generatedoorpass();
@@ -1247,7 +1252,14 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
         
         while (retries--) {
             int correct = 1;
-            
+            if(rand()%10 == 0) {
+                int temp = pass[3];
+                pass[3] = pass[0];
+                pass[0] = temp;
+                temp = pass[2];
+                pass[2] = pass[1];
+                pass[1] = temp;
+            }
             for (int i = 0; i < 4; i++) {
                 int ch = getch();
                 if (ch == 'q') {
@@ -1274,14 +1286,14 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
                 if (retries == 2) {
                     attron(COLOR_PAIR(5));
                     mvprintw(1, 2, "                                                                                  ");
-                    mvprintw(1, 2, "Wrong password! Try again! The password you entered: %s, the actual password: %s", input, pass);
+                    mvprintw(1, 2, "Wrong password! Try again!");
                     attroff(COLOR_PAIR(5));
                     refresh();
                 }
                 if (retries == 1) {
                     mvprintw(1, 2, "                                                                                  ");
                     attron(COLOR_PAIR(1));
-                    mvprintw(10, 10, "Wrong password! Try again!");
+                    mvprintw(1, 2, "Wrong password! Try again!");
                     attroff(COLOR_PAIR(1));
                     refresh();
                 }
@@ -1293,10 +1305,30 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
         }
     }
 }
-
-    if(game_map[newRow][newCol] == TRAP) battleroom();
-    if (game_map[newRow][newCol] == STAIRCASE && current_floor == 0) {
-        saveFloor();
+if(game_map[newRow][newCol] == HEALTH_POTION){
+    game_map[newRow][newCol] = FLOOR;
+    player.row = newRow;
+    player.col = newCol;
+    player.hps ++;
+}
+if(game_map[newRow][newCol] == SPEED_POTION){
+    game_map[newRow][newCol] = FLOOR;
+    player.row = newRow;
+    player.col = newCol;
+    player.sps ++;
+}
+if(game_map[newRow][newCol] == DAMAGE_POTION){
+    game_map[newRow][newCol] = FLOOR;
+    player.row = newRow;
+    player.col = newCol;
+    player.dps ++;
+}
+if(game_map[newRow][newCol] == TRAP) {
+    battleroom();
+    game_map[newRow][newCol] = REVEALEDTRAP;
+}
+if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
+        
         int start_row = newRow, end_row = newRow, start_col = newCol, end_col = newCol;
         while (start_row > 0 && game_map[start_row - 1][newCol] != EMPTY && game_map[start_row - 1][newCol] !=CORRIDOR) start_row--;
         while (end_row < MAXROW - 1 && game_map[end_row + 1][newCol] != EMPTY && game_map[end_row + 1][newCol] != CORRIDOR) end_row++;
@@ -1304,6 +1336,20 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
         while (end_col < MAXCOL - 1 && game_map[newRow][end_col + 1] != EMPTY && game_map[newRow][end_col + 1] != CORRIDOR) end_col++;
         int room_rows = end_row - start_row + 1;
         int room_cols = end_col - start_col + 1;
+        //HallOfFameEntry entry = {0};
+        
+        if(load_user_data(&entry)){
+        entry.score = entry.score + 100;
+        //entry.gold_pieces = entry.gold_pieces + gold;
+        entry.games_finished = entry.games_finished +1 ;
+    }
+    else {
+        entry.score = 100;
+        //entry.gold_pieces = gold;
+        entry.games_finished = 1;
+        entry.first_game_time = time(NULL);
+    }
+    savehall(entry);
         current_floor++;
         generate_random_map(start_row, start_col, room_rows-1, room_cols-1);
         makeitvisible(start_row, start_col, room_rows, room_cols);
@@ -1342,7 +1388,31 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
             }
         }
     }
+if(game_map[newRow][newCol] == END){
+    clear();
+    attron(COLOR_PAIR(2));
+    mvprintw(17, 75, "Congrtulations! You won the game");
+    attroff(COLOR_PAIR(2));
+    refresh();
+    getch();
+    napms(10000);
+    if(load_user_data(&entry)){
+        entry.score = entry.score + 500;
+        //entry.gold_pieces = entry.gold_pieces + gold;
+        entry.games_finished = entry.games_finished +1 ;
+    }
+    else {
+        entry.score = 100;
+        //entry.gold_pieces = gold;
+        entry.games_finished = 1;
+        entry.first_game_time = time(NULL);
+    }
+    savehall(entry);
+    
+    main_menu();
 }
+}
+
 void printMap() {
     clear(); 
 
@@ -1378,7 +1448,7 @@ void printMap() {
                 case PASSWORDDOOR:
                     if(unlocked[i][j]) {
                         attron(COLOR_PAIR(2));
-                        mvaddch(i, j, '@');
+                        mvaddch(i, j, '?');
                         attroff(COLOR_PAIR(2));
                     }
                     else {
@@ -1387,6 +1457,27 @@ void printMap() {
                         attroff(COLOR_PAIR(1));
                     }
                     break;
+                case HEALTH_POTION: 
+                attron(COLOR_PAIR(3));
+                mvaddch(i, j, 'h'); 
+                attroff(COLOR_PAIR(3));
+                break;
+                case DAMAGE_POTION: 
+                attron(COLOR_PAIR(3));
+                mvaddch(i, j, 'd'); 
+                attroff(COLOR_PAIR(3));
+                break;
+                case SPEED_POTION: 
+                attron(COLOR_PAIR(3));
+                mvaddch(i, j, 's'); 
+                attroff(COLOR_PAIR(3));
+                break;
+                case REVEALEDTRAP: mvaddch(i, j, '*'); break;
+                case END: 
+                attron(COLOR_PAIR(6));
+                mvaddch(i, j, "~");
+                attroff(COLOR_PAIR(6));
+                break;
                 default: mvaddch(i, j, ' '); break;
             }
             }
@@ -1422,7 +1513,7 @@ void createrandompillar(int row, int col, int roomRows, int roomCols){
         int coln = (rand() % (roomCols-2)) +col +1;
         if(game_map[rown][coln] == FLOOR )game_map[rown][coln] = PILLAR;
         else {
-            createrandomdoor(row, col, roomRows, roomCols);
+            number_of_pillars ++;
         }
     }
 }
@@ -1448,17 +1539,6 @@ void placestaircase(int row, int col, int roomRows, int roomCols){
     else{
         placestaircase(row, col, roomRows, roomCols);
     }
-}
-void saveFloor() {
-    memcpy(floors[current_floor].map, game_map, sizeof(game_map));
-    floors[current_floor].player_row = player.row;
-    floors[current_floor].player_col = player.col;
-}
-void loadFloor(int floor) {
-    current_floor = floor;
-    memcpy(game_map, floors[floor].map, sizeof(game_map));
-    player.row = floors[floor].player_row;
-    player.col = floors[floor].player_col;
 }
 void placepassword(int row, int col, int roomRows, int roomCols){
     int rown = (rand() % (roomRows -2)) + row +1;
@@ -1495,4 +1575,54 @@ void placeancientkey(int row, int col, int roomRows, int roomCols){
     else{
         placeancientkey(row, col, roomRows, roomCols);
     }
+}
+void placepotions(int row, int col, int roomRows, int roomCols){
+ int numberofpotions = rand() %10 ;
+ while (numberofpotions--)
+ {
+    int rown = (rand()% (roomRows-2)) + row + 1;
+    int coln = (rand()% (roomCols-2)) + col + 1;
+    if(game_map[rown][coln] == FLOOR){
+        int random = rand();
+        if(random % 3 == 0){
+            game_map[rown][coln] = SPEED_POTION;
+        }
+        if(random%3 == 1){
+            game_map[rown][coln] = DAMAGE_POTION;
+        }
+        if(random%3==2){
+            game_map[rown][coln] = HEALTH_POTION;
+        }
+    }
+ }
+ for(int i = row; i<= row + roomRows; i++){
+    for(int j = col; j<= col + roomCols; j++){
+        type[i][j] = 2;
+    }
+ }
+}
+void make_it_treasure(int row, int col, int roomRows, int roomCols){
+    for (int i=row; i<=row+roomRows; i++){
+        for(int j= col; j<=col+roomCols; j++){
+            type[i][j] = 3;
+        }
+    }
+    trapsfortreasure(row, col, roomRows, roomCols);
+    endpoint(row, col, roomRows, roomCols);
+}
+void trapsfortreasure(int row, int col, int roomRows, int roomCols){
+    int retries = 5;
+    while (retries--)
+    {
+        int rown = (rand()% (roomRows-2)) + row + 1;
+        int coln = (rand()% (roomCols-2)) + col + 1;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] == TRAP;
+    }
+    
+}
+void endpoint(int row, int col, int roomRows, int roomCols){
+    int rown = (rand()%(roomRows-2)) + row + 1;
+    int coln = (rand() % (roomCols-2)) + row + 1;
+    if(game_map[rown][coln] == FLOOR || game_map[rown][coln] == TRAP ) game_map[rown][coln] = END;
+    else endpoint(row, col, roomRows, roomCols)
 }
