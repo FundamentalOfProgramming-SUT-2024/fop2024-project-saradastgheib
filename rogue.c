@@ -37,7 +37,8 @@ typedef enum {
     HEALTH_POTION = 18,
     SPEED_POTION = 19,
     DAMAGE_POTION = 20,
-    END = 21
+    END = 21,
+    GOLD = 22
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -122,6 +123,8 @@ void placepotions(int row, int col, int roomRows, int roomCols);
 void make_it_treasure(int row, int col, int roomRows, int roomCols);
 void trapsfortreasure(int row, int col, int roomRows, int roomCols);
 void endpoint(int row, int col, int roomRows, int roomCols);
+void placenormalpotions(int row, int col, int roomRows, int roomCols);
+void placegold(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
@@ -1132,6 +1135,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
             createRoom(start_row, start_col, rowscount, colscount);
             //createrandomdoor(start_row, start_col, rowscount, colscount);
             createrandompillar(start_row, start_col, rowscount, colscount);
+            placenormalpotions(start_row, start_col, rowscount, colscount);
             rooms[room_index].center_x = start_col + colscount / 2;
             rooms[room_index].center_y = start_row + rowscount / 2;
             rooms[room_index].width = colscount;
@@ -1475,7 +1479,7 @@ void printMap() {
                 case REVEALEDTRAP: mvaddch(i, j, '*'); break;
                 case END: 
                 attron(COLOR_PAIR(6));
-                mvaddch(i, j, "~");
+                mvaddch(i, j, '~');
                 attroff(COLOR_PAIR(6));
                 break;
                 default: mvaddch(i, j, ' '); break;
@@ -1622,7 +1626,30 @@ void trapsfortreasure(int row, int col, int roomRows, int roomCols){
 }
 void endpoint(int row, int col, int roomRows, int roomCols){
     int rown = (rand()%(roomRows-2)) + row + 1;
-    int coln = (rand() % (roomCols-2)) + row + 1;
+    int coln = (rand() % (roomCols-2)) + col + 1;
     if(game_map[rown][coln] == FLOOR || game_map[rown][coln] == TRAP ) game_map[rown][coln] = END;
-    else endpoint(row, col, roomRows, roomCols)
+    else endpoint(row, col, roomRows, roomCols);
+}
+void placenormalpotions(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 5;
+    while (count --)
+    {
+    int rown = (rand()% (roomRows-2)) + row + 1;
+    int coln = (rand()% (roomCols-2)) + col +1;
+    int random = rand()%3 +1 ;
+    if(game_map[rown][coln]== FLOOR && random == 1) game_map[rown][coln] = HEALTH_POTION;
+    else if(game_map[rown][coln]== FLOOR && random == 2) game_map[rown][coln] = DAMAGE_POTION;
+    else if(game_map[rown][coln]== FLOOR && random ==3) game_map[rown][coln] == SPEED_POTION;
+    }
+    
+
+}
+void placegold(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 10;
+    while(count -- ){
+        int rown = (rand() % (roomRows-2)) + row + 1;
+        int coln = (rand()%(roomCols-2)) + col + 1;
+        int random = rand() % 3 + 1;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] == GOLD;
+    }
 }
