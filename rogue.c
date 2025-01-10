@@ -60,6 +60,7 @@ typedef struct {
     int hps;
     int dps;
     int sps;
+    int golds;
 } Player;
 Player player;
 typedef struct {
@@ -86,6 +87,7 @@ typedef struct {
 HallOfFameEntry entry = {0};
 Room rooms[10];
 int room_index = 0;
+int g = 1;
 void main_menu ();
 void startplaying();
 void registeruser();
@@ -131,7 +133,7 @@ int main() {
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
-    nodelay(stdscr, TRUE);
+    //nodelay(stdscr, TRUE);
     //setlocale(LC_ALL, ""); 
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
@@ -140,6 +142,7 @@ int main() {
     //init_color(COLOR_CYAN, 255, 255, 0);  
     init_pair(4, COLOR_CYAN, COLOR_BLACK);
     init_pair(5, COLOR_YELLOW, COLOR_BLACK); 
+    init_pair(6, COLOR_CYAN, COLOR_BLACK);
     main_menu();
     endwin();
     return 0;
@@ -179,7 +182,7 @@ void main_menu() {
             } // profile
             else if(choice == 2){
                 displayhalloffame();
-            } //hall of fame
+            } 
             else if(choice ==3) {
                 settings();
             }
@@ -224,11 +227,12 @@ void startplaying(){
             }
             else if(choice == 1){
                 login();
+                
             }
             else if(choice==2) {
                 strcpy(current_username, "Guest");
-                //HallOfFameEntry entry = {0};
                 strcpy(entry.username, current_username);
+                //HallOfFameEntry entry = {0};
                 pre_game_area();
             }
             else if(choice ==3){
@@ -275,6 +279,9 @@ void registeruser() {
             username[i++] = ch;
             mvwaddch(win, 3, 12 + i - 1, ch);
         }
+        else if(ch == 27) {
+            startplaying();
+        }
         wrefresh(win);
     }
     // mvwprintw(win, 9, 2, "DEBUG: Captured Username = %s", username);
@@ -284,7 +291,7 @@ void registeruser() {
 
     if (user_exists(username)) {
         wattron(win, COLOR_PAIR(1));
-        mvwprintw(win, 5, 2, "Username already exists! Pick another one.");
+        mvwprintw(win, 5, 2, "Username already exists!");
         wattroff(win, COLOR_PAIR(1));
         wrefresh(win);
         continue;
@@ -294,7 +301,7 @@ void registeruser() {
 
 }
 flushinp();
-mvwprintw(win, 5, 2, "                                          ");
+mvwprintw(win, 5, 2, "                               ");
     while (1) {
         mvwprintw(win, 6, 2, "Password: ");
         mvwprintw(win, 6,12, "                     ");
@@ -484,9 +491,11 @@ void login(){
             mvwprintw(win, 5, 2, "Username doesn't exist");
             wattroff(win, COLOR_PAIR(1));
             wrefresh(win);
+            
             continue;
         }
         else {
+            mvwprintw(win, 5, 2, "                        ");
             break;
         }
     }
@@ -519,14 +528,16 @@ void login(){
         }
         password[i] = '\0';
         if(check_password(username, password)){
-            strncpy(current_username, username, sizeof(current_username) - 1);
+            strcpy(current_username, username);
             current_username[sizeof(current_username) - 1] = '\0';
             wattron(win, COLOR_PAIR(2));
+            mvwprintw(win, 8, 2, "                           ");
             mvwprintw(win, 8, 2, "Login successful");
             wattroff(win, COLOR_PAIR(2));
             wrefresh(win);
             //HallOfFameEntry entry = {0};
             strcpy(entry.username, current_username);
+            savehall(entry);
             getch();
             pre_game_area();
         }
@@ -746,10 +757,15 @@ void printall() {
                 case WALLH: mvaddch(i, j, '_'); break;
                 case WALLNO: mvaddch(i, j, ' '); break;
                 case TRAP: mvaddch(i, j, 'T'); break;
-                case STAIRCASE: mvaddch(i, j, 'S'); break;
+                case STAIRCASE: mvaddch(i, j, '<'); break;
                 case SWALLH: mvaddch(i, j, 'D'); break;
                 case SWALLV: mvaddch(i, j, 'D'); break;
                 case SWALLNO: mvaddch(i, j, 'D'); break;
+                case GOLD:
+                attron(COLOR_PAIR(5));
+                mvaddch(i, j, 'G');
+                attroff(COLOR_PAIR(5));
+                break;
                 case ANCIENTKEY:  
                     mvaddch(i, j, '^');  
                      break;
@@ -797,10 +813,11 @@ void game_area(){
     removeUnconnectedDoors();
     while(1){
         printMap();
-        mvprintw(35, 10, "Health = %d", player.health);
-        mvprintw(35, 40, "ancient keys = %d", player.ancientkeys);
-        mvprintw(35, 70, "broken keys = %d", player.brokenkeys);
+        mvprintw(35, 10, "Health: %d", player.health);
+        mvprintw(35, 40, "ancient keys: %d", player.ancientkeys);
+        mvprintw(35, 70, "broken keys: %d", player.brokenkeys);
         mvprintw(35, 100, "Total score: %d", entry.score);
+        mvprintw(35, 130, "Gold: %d", entry.gold_pieces);
         refresh();
 
         int ch = getch();
@@ -835,29 +852,79 @@ void game_area(){
                 player.ancientkeys ++;
                 player.brokenkeys = player.brokenkeys -2;
             }
+            break;
         case 'q':
             return;
         case 'm':
             printall();
+            break;
+        case 'f':
+            ch = getch();
+            if(ch == 'y'){
+                while(game_map[player.row-1][player.col-1] != WALLH || game_map[player.row-1][player.col-1] != WALLV || game_map[player.row-1][player.col-1] != WALLNO || game_map[player.row-1][player.col-1] != PILLAR || game_map[player.row-1][player.col-1] != END ||
+                game_map[player.row-1][player.col-1] != ANCIENTKEY ||game_map[player.row-1][player.col-1] != STAIRCASE || game_map[player.row-1][player.col-1] != REVEALEDTRAP || game_map[player.row-1][player.col-1] != HEALTH_POTION || 
+                game_map[player.row-1][player.col-1] != PASSWORDDOOR || game_map[player.row-1][player.col-1] != PASSWORD || game_map[player.row-1][player.col-1] != TRAP || game_map[player.row-1][player.col-1] != SPEED_POTION || game_map[player.row-1][player.col-1] != DAMAGE_POTION ){
+                    movePlayer(player.row-1, player.col-1);
+                }
+            }
+            if(ch == 'u'){
+                while(game_map[player.row-1][player.col+1] != WALLH || game_map[player.row-1][player.col+1] != WALLV || game_map[player.row-1][player.col+1] != WALLNO || game_map[player.row-1][player.col+1] != PILLAR || game_map[player.row-1][player.col+1] != END ||
+                game_map[player.row-1][player.col+1] != ANCIENTKEY ||game_map[player.row-1][player.col+1] != STAIRCASE || game_map[player.row-1][player.col+1] != REVEALEDTRAP || game_map[player.row-1][player.col+1] != HEALTH_POTION || 
+                game_map[player.row-1][player.col+1] != PASSWORDDOOR || game_map[player.row-1][player.col+1] != PASSWORD || game_map[player.row-1][player.col+1] != TRAP || game_map[player.row-1][player.col+1] != SPEED_POTION || game_map[player.row-1][player.col+1] != DAMAGE_POTION ){
+                    movePlayer(player.row-1, player.col+1);
+                }
+            }
+            if(ch == 'l'){
+                while(game_map[player.row][player.col+1] != WALLH || game_map[player.row][player.col+1] != WALLV || game_map[player.row][player.col+1] != WALLNO || game_map[player.row][player.col+1] != PILLAR || game_map[player.row][player.col+1] != END ||
+                game_map[player.row][player.col+1] != ANCIENTKEY ||game_map[player.row][player.col+1] != STAIRCASE || game_map[player.row][player.col+1] != REVEALEDTRAP || game_map[player.row][player.col+1] != HEALTH_POTION || 
+                game_map[player.row][player.col+1] != PASSWORDDOOR || game_map[player.row][player.col+1] != PASSWORD || game_map[player.row][player.col+1] != TRAP || game_map[player.row][player.col+1] != SPEED_POTION || game_map[player.row][player.col+1] != DAMAGE_POTION ){
+                    movePlayer(player.row, player.col+1);
+                }
+            }
+            if(ch == 'j'){
+                while(game_map[player.row-1][player.col] != WALLH || game_map[player.row-1][player.col] != WALLV || game_map[player.row-1][player.col] != WALLNO || game_map[player.row-1][player.col] != PILLAR || game_map[player.row-1][player.col] != END ||
+                game_map[player.row-1][player.col] != ANCIENTKEY ||game_map[player.row-1][player.col] != STAIRCASE || game_map[player.row-1][player.col] != REVEALEDTRAP || game_map[player.row-1][player.col] != HEALTH_POTION || 
+                game_map[player.row-1][player.col] != PASSWORDDOOR || game_map[player.row-1][player.col] != PASSWORD || game_map[player.row-1][player.col] != TRAP || game_map[player.row-1][player.col] != SPEED_POTION || game_map[player.row-1][player.col] != DAMAGE_POTION ){
+                    movePlayer(player.row-1, player.col);
+                }
+            }
+            if(ch == 'k'){
+                while(game_map[player.row+1][player.col] != WALLH || game_map[player.row+1][player.col] != WALLV || game_map[player.row+1][player.col] != WALLNO || game_map[player.row+1][player.col] != PILLAR || game_map[player.row+1][player.col] != END ||
+                game_map[player.row+1][player.col] != ANCIENTKEY ||game_map[player.row+1][player.col] != STAIRCASE || game_map[player.row+1][player.col] != REVEALEDTRAP || game_map[player.row+1][player.col] != HEALTH_POTION || 
+                game_map[player.row+1][player.col] != PASSWORDDOOR || game_map[player.row+1][player.col] != PASSWORD || game_map[player.row+1][player.col] != TRAP || game_map[player.row+1][player.col] != SPEED_POTION || game_map[player.row+1][player.col] != DAMAGE_POTION ){
+                    movePlayer(player.row+1, player.col);
+                }
+            }
+            if(ch == 'h'){
+                while(game_map[player.row][player.col-1] != WALLH || game_map[player.row][player.col-1] != WALLV || game_map[player.row][player.col-1] != WALLNO || game_map[player.row][player.col-1] != PILLAR || game_map[player.row][player.col-1] != END ||
+                game_map[player.row][player.col-1] != ANCIENTKEY ||game_map[player.row][player.col-1] != STAIRCASE || game_map[player.row][player.col-1] != REVEALEDTRAP || game_map[player.row][player.col-1] != HEALTH_POTION || 
+                game_map[player.row][player.col-1] != PASSWORDDOOR || game_map[player.row][player.col-1] != PASSWORD || game_map[player.row][player.col-1] != TRAP || game_map[player.row][player.col-1] != SPEED_POTION || game_map[player.row][player.col-1] != DAMAGE_POTION ){
+                    movePlayer(player.row, player.col-1);
+                }
+            }
+            if(ch == 'b'){
+                while(game_map[player.row+1][player.col-1] != WALLH || game_map[player.row+1][player.col-1] != WALLV || game_map[player.row+1][player.col-1] != WALLNO || game_map[player.row+1][player.col-1] != PILLAR || game_map[player.row+1][player.col-1] != END ||
+                game_map[player.row+1][player.col-1] != ANCIENTKEY ||game_map[player.row+1][player.col-1] != STAIRCASE || game_map[player.row+1][player.col-1] != REVEALEDTRAP || game_map[player.row+1][player.col-1] != HEALTH_POTION || 
+                game_map[player.row+1][player.col-1] != PASSWORDDOOR || game_map[player.row+1][player.col-1] != PASSWORD || game_map[player.row+1][player.col-1] != TRAP || game_map[player.row+1][player.col-1] != SPEED_POTION || game_map[player.row+1][player.col-1] != DAMAGE_POTION ){
+                    movePlayer(player.row+1, player.col-1);
+                }
+            }
+            if(ch == 'n'){
+                while(game_map[player.row+1][player.col+1] != WALLH || game_map[player.row+1][player.col+1] != WALLV || game_map[player.row+1][player.col+1] != WALLNO || game_map[player.row+1][player.col+1] != PILLAR || game_map[player.row+1][player.col+1] != END ||
+                game_map[player.row+1][player.col+1] != ANCIENTKEY ||game_map[player.row+1][player.col+1] != STAIRCASE || game_map[player.row+1][player.col+1] != REVEALEDTRAP || game_map[player.row+1][player.col+1] != HEALTH_POTION || 
+                game_map[player.row+1][player.col+1] != PASSWORDDOOR || game_map[player.row+1][player.col+1] != PASSWORD || game_map[player.row+1][player.col+1] != TRAP || game_map[player.row+1][player.col+1] != SPEED_POTION || game_map[player.row+1][player.col+1] != DAMAGE_POTION ){
+                    movePlayer(player.row+1, player.col+1);
+                }
+            }
+            break;
+        case 'g':
+        g = 0;
+        break;
         default:
             break;
         }
     }
     refresh();
-   
-//    strcpy(entry.username, current_username);
-//    if(load_user_data(&entry)){
-//     entry.score = entry.score + 100;
-//     entry.gold_pieces = entry.gold_pieces + gold;
-//     entry.games_finished = entry.games_finished +1 ;
-//    }
-//    else {
-//     entry.score = 100;
-//     entry.gold_pieces = gold;
-//     entry.games_finished = 1;
-//     entry.first_game_time = time(NULL);
-//    }
-//    savehall(entry);
 }
 int load_user_data(HallOfFameEntry *entry){
     FILE *file = fopen(HALLFILE, "r");
@@ -1110,7 +1177,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     if (staircase_row >= 0 && staircase_col >= 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         placepotions(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
-        //createrandomdoor(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
+        placegold(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         createrandompillar(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         makeitvisible(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         rooms[room_index].center_x = staircase_col + staircase_roomCols / 2;
@@ -1133,7 +1200,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
 
         if (!itoverlaps(start_row, start_col, rowscount, colscount)) {
             createRoom(start_row, start_col, rowscount, colscount);
-            //createrandomdoor(start_row, start_col, rowscount, colscount);
+            placegold(start_row, start_col, rowscount, colscount);
             createrandompillar(start_row, start_col, rowscount, colscount);
             placenormalpotions(start_row, start_col, rowscount, colscount);
             rooms[room_index].center_x = start_col + colscount / 2;
@@ -1201,11 +1268,15 @@ void movePlayer(int newRow, int newCol) {
             }
         }
     }
-    if(game_map[newRow][newCol] == ANCIENTKEY) {
-        player.ancientkeys ++;
+    if(game_map[newRow][newCol] == ANCIENTKEY ) {
+        if(g){player.ancientkeys ++;
         game_map[newRow][newCol] = FLOOR;
         player.row = newRow;
+        player.col = newCol;}
+        else{
+        player.row = newRow;
         player.col = newCol;
+        }
     }
     if (game_map[newRow][newCol] == PASSWORD) {
     generatedoorpass();
@@ -1213,7 +1284,16 @@ void movePlayer(int newRow, int newCol) {
     refresh();
     napms(10000);
 }
-
+if(game_map[newRow][newCol] == GOLD){
+    if(g){game_map[newRow][newCol] = FLOOR;
+    player.row = newRow;
+    player.col = newCol;
+    player.golds ++;}
+    else{
+    player.row = newRow;
+    player.col = newCol;
+    }
+}
 if (game_map[newRow][newCol] == PASSWORDDOOR) {
     if (unlocked[newRow][newCol]) {
         player.row = newRow;
@@ -1310,22 +1390,23 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
     }
 }
 if(game_map[newRow][newCol] == HEALTH_POTION){
-    game_map[newRow][newCol] = FLOOR;
+    if(g){game_map[newRow][newCol] = FLOOR;
+    player.hps ++; }
     player.row = newRow;
     player.col = newCol;
-    player.hps ++;
 }
 if(game_map[newRow][newCol] == SPEED_POTION){
-    game_map[newRow][newCol] = FLOOR;
+    if(g){game_map[newRow][newCol] = FLOOR;
+    player.sps ++;}
     player.row = newRow;
     player.col = newCol;
-    player.sps ++;
+    
 }
-if(game_map[newRow][newCol] == DAMAGE_POTION){
-    game_map[newRow][newCol] = FLOOR;
+if(game_map[newRow][newCol] == DAMAGE_POTION ){
+    if(g){game_map[newRow][newCol] = FLOOR;
+    player.dps ++;}
     player.row = newRow;
     player.col = newCol;
-    player.dps ++;
 }
 if(game_map[newRow][newCol] == TRAP) {
     battleroom();
@@ -1342,19 +1423,19 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
         int room_cols = end_col - start_col + 1;
         //HallOfFameEntry entry = {0};
         
-        if(load_user_data(&entry)){
-        entry.score = entry.score + 100;
-        //entry.gold_pieces = entry.gold_pieces + gold;
-        entry.games_finished = entry.games_finished +1 ;
+    if(load_user_data(&entry)){
+        entry.score = entry.score + player.golds * (current_floor+1) / 3;
+        entry.gold_pieces = entry.gold_pieces + player.golds;
     }
     else {
-        entry.score = 100;
-        //entry.gold_pieces = gold;
-        entry.games_finished = 1;
+        entry.score = player.golds * (current_floor+1) / 3;
+        entry.gold_pieces = player.golds;
+        //entry.games_finished = 1;
         entry.first_game_time = time(NULL);
     }
     savehall(entry);
         current_floor++;
+        player.golds = 0;
         generate_random_map(start_row, start_col, room_rows-1, room_cols-1);
         makeitvisible(start_row, start_col, room_rows, room_cols);
         player.row = start_row + room_rows / 2;
@@ -1401,13 +1482,13 @@ if(game_map[newRow][newCol] == END){
     getch();
     napms(10000);
     if(load_user_data(&entry)){
-        entry.score = entry.score + 500;
-        //entry.gold_pieces = entry.gold_pieces + gold;
+        entry.score = entry.score + player.golds*(current_floor+1)/3;
+        entry.gold_pieces = entry.gold_pieces + player.golds;
         entry.games_finished = entry.games_finished +1 ;
     }
     else {
-        entry.score = 100;
-        //entry.gold_pieces = gold;
+        entry.score = player.golds * (current_floor+1) / 3;
+        entry.gold_pieces = player.golds;
         entry.games_finished = 1;
         entry.first_game_time = time(NULL);
     }
@@ -1415,6 +1496,7 @@ if(game_map[newRow][newCol] == END){
     
     main_menu();
 }
+g = 1;
 }
 
 void printMap() {
@@ -1435,7 +1517,7 @@ void printMap() {
                 case WALLH: mvaddch(i, j, '_'); break;
                 case WALLNO: mvaddch(i, j, ' '); break;
                 case TRAP: mvaddch(i, j, '.'); break;
-                case STAIRCASE: mvaddch(i, j, 'S'); break;
+                case STAIRCASE: mvaddch(i, j, '<'); break;
                 case SWALLH: mvaddch(i, j, '_'); break;
                 case SWALLV: mvaddch(i, j, '|'); break;
                 case SWALLNO: mvaddch(i, j, ' '); break;
@@ -1477,6 +1559,11 @@ void printMap() {
                 attroff(COLOR_PAIR(3));
                 break;
                 case REVEALEDTRAP: mvaddch(i, j, '*'); break;
+                case GOLD:
+                attron(COLOR_PAIR(5));
+                mvaddch(i, j, 'G');
+                attroff(COLOR_PAIR(5));
+                break;
                 case END: 
                 attron(COLOR_PAIR(6));
                 mvaddch(i, j, '~');
@@ -1650,6 +1737,6 @@ void placegold(int row, int col, int roomRows, int roomCols){
         int rown = (rand() % (roomRows-2)) + row + 1;
         int coln = (rand()%(roomCols-2)) + col + 1;
         int random = rand() % 3 + 1;
-        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] == GOLD;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = GOLD;
     }
 }
