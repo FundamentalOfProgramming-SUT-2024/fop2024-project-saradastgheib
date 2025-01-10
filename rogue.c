@@ -861,58 +861,58 @@ void game_area(){
         case 'f':
             ch = getch();
             if(ch == 'y'){
-                while(game_map[player.row-1][player.col-1] != WALLH || game_map[player.row-1][player.col-1] != WALLV || game_map[player.row-1][player.col-1] != WALLNO || game_map[player.row-1][player.col-1] != PILLAR || game_map[player.row-1][player.col-1] != END ||
-                game_map[player.row-1][player.col-1] != ANCIENTKEY ||game_map[player.row-1][player.col-1] != STAIRCASE || game_map[player.row-1][player.col-1] != REVEALEDTRAP || game_map[player.row-1][player.col-1] != HEALTH_POTION || 
-                game_map[player.row-1][player.col-1] != PASSWORDDOOR || game_map[player.row-1][player.col-1] != PASSWORD || game_map[player.row-1][player.col-1] != TRAP || game_map[player.row-1][player.col-1] != SPEED_POTION || game_map[player.row-1][player.col-1] != DAMAGE_POTION ){
+                while(game_map[player.row-1][player.col-1] != WALLH && game_map[player.row-1][player.col-1] != WALLV && game_map[player.row-1][player.col-1] != WALLNO && game_map[player.row-1][player.col-1] != PILLAR && game_map[player.row-1][player.col-1] != END &&
+                game_map[player.row-1][player.col-1] != ANCIENTKEY &&game_map[player.row-1][player.col-1] != STAIRCASE && game_map[player.row-1][player.col-1] != REVEALEDTRAP && game_map[player.row-1][player.col-1] != HEALTH_POTION && 
+                game_map[player.row-1][player.col-1] != PASSWORDDOOR && game_map[player.row-1][player.col-1] != PASSWORD && game_map[player.row-1][player.col-1] != TRAP && game_map[player.row-1][player.col-1] != SPEED_POTION && game_map[player.row-1][player.col-1] != DAMAGE_POTION ){
                     movePlayer(player.row-1, player.col-1);
                 }
             }
             if(ch == 'u'){
-                while(game_map[player.row-1][player.col+1] != WALLH || game_map[player.row-1][player.col+1] != WALLV || game_map[player.row-1][player.col+1] != WALLNO || game_map[player.row-1][player.col+1] != PILLAR || game_map[player.row-1][player.col+1] != END ||
-                game_map[player.row-1][player.col+1] != ANCIENTKEY ||game_map[player.row-1][player.col+1] != STAIRCASE || game_map[player.row-1][player.col+1] != REVEALEDTRAP || game_map[player.row-1][player.col+1] != HEALTH_POTION || 
-                game_map[player.row-1][player.col+1] != PASSWORDDOOR || game_map[player.row-1][player.col+1] != PASSWORD || game_map[player.row-1][player.col+1] != TRAP || game_map[player.row-1][player.col+1] != SPEED_POTION || game_map[player.row-1][player.col+1] != DAMAGE_POTION ){
+                while(game_map[player.row-1][player.col+1] != WALLH && game_map[player.row-1][player.col+1] != WALLV && game_map[player.row-1][player.col+1] != WALLNO && game_map[player.row-1][player.col+1] != PILLAR && game_map[player.row-1][player.col+1] != END &&
+                game_map[player.row-1][player.col+1] != ANCIENTKEY &&game_map[player.row-1][player.col+1] != STAIRCASE && game_map[player.row-1][player.col+1] != REVEALEDTRAP && game_map[player.row-1][player.col+1] != HEALTH_POTION && 
+                game_map[player.row-1][player.col+1] != PASSWORDDOOR && game_map[player.row-1][player.col+1] != PASSWORD && game_map[player.row-1][player.col+1] != TRAP && game_map[player.row-1][player.col+1] != SPEED_POTION && game_map[player.row-1][player.col+1] != DAMAGE_POTION ){
                     movePlayer(player.row-1, player.col+1);
                 }
             }
             if(ch == 'l'){
-                while(game_map[player.row][player.col+1] != WALLH || game_map[player.row][player.col+1] != WALLV || game_map[player.row][player.col+1] != WALLNO || game_map[player.row][player.col+1] != PILLAR || game_map[player.row][player.col+1] != END ||
-                game_map[player.row][player.col+1] != ANCIENTKEY ||game_map[player.row][player.col+1] != STAIRCASE || game_map[player.row][player.col+1] != REVEALEDTRAP || game_map[player.row][player.col+1] != HEALTH_POTION || 
-                game_map[player.row][player.col+1] != PASSWORDDOOR || game_map[player.row][player.col+1] != PASSWORD || game_map[player.row][player.col+1] != TRAP || game_map[player.row][player.col+1] != SPEED_POTION || game_map[player.row][player.col+1] != DAMAGE_POTION ){
+                while(game_map[player.row][player.col+1] != WALLH && game_map[player.row][player.col+1] != WALLV && game_map[player.row][player.col+1] != WALLNO && game_map[player.row][player.col+1] != PILLAR && game_map[player.row][player.col+1] != END &&
+                game_map[player.row][player.col+1] != ANCIENTKEY &&game_map[player.row][player.col+1] != STAIRCASE && game_map[player.row][player.col+1] != REVEALEDTRAP && game_map[player.row][player.col+1] != HEALTH_POTION && 
+                game_map[player.row][player.col+1] != PASSWORDDOOR && game_map[player.row][player.col+1] != PASSWORD && game_map[player.row][player.col+1] != TRAP && game_map[player.row][player.col+1] != SPEED_POTION && game_map[player.row][player.col+1] != DAMAGE_POTION ){
                     movePlayer(player.row, player.col+1);
                 }
             }
             if(ch == 'j'){
-                while(game_map[player.row-1][player.col] != WALLH || game_map[player.row-1][player.col] != WALLV || game_map[player.row-1][player.col] != WALLNO || game_map[player.row-1][player.col] != PILLAR || game_map[player.row-1][player.col] != END ||
-                game_map[player.row-1][player.col] != ANCIENTKEY ||game_map[player.row-1][player.col] != STAIRCASE || game_map[player.row-1][player.col] != REVEALEDTRAP || game_map[player.row-1][player.col] != HEALTH_POTION || 
-                game_map[player.row-1][player.col] != PASSWORDDOOR || game_map[player.row-1][player.col] != PASSWORD || game_map[player.row-1][player.col] != TRAP || game_map[player.row-1][player.col] != SPEED_POTION || game_map[player.row-1][player.col] != DAMAGE_POTION ){
+                while(game_map[player.row-1][player.col] != WALLH && game_map[player.row-1][player.col] != WALLV && game_map[player.row-1][player.col] != WALLNO && game_map[player.row-1][player.col] != PILLAR && game_map[player.row-1][player.col] != END &&
+                game_map[player.row-1][player.col] != ANCIENTKEY &&game_map[player.row-1][player.col] != STAIRCASE && game_map[player.row-1][player.col] != REVEALEDTRAP && game_map[player.row-1][player.col] != HEALTH_POTION && 
+                game_map[player.row-1][player.col] != PASSWORDDOOR && game_map[player.row-1][player.col] != PASSWORD && game_map[player.row-1][player.col] != TRAP && game_map[player.row-1][player.col] != SPEED_POTION && game_map[player.row-1][player.col] != DAMAGE_POTION ){
                     movePlayer(player.row-1, player.col);
                 }
             }
             if(ch == 'k'){
-                while(game_map[player.row+1][player.col] != WALLH || game_map[player.row+1][player.col] != WALLV || game_map[player.row+1][player.col] != WALLNO || game_map[player.row+1][player.col] != PILLAR || game_map[player.row+1][player.col] != END ||
-                game_map[player.row+1][player.col] != ANCIENTKEY ||game_map[player.row+1][player.col] != STAIRCASE || game_map[player.row+1][player.col] != REVEALEDTRAP || game_map[player.row+1][player.col] != HEALTH_POTION || 
-                game_map[player.row+1][player.col] != PASSWORDDOOR || game_map[player.row+1][player.col] != PASSWORD || game_map[player.row+1][player.col] != TRAP || game_map[player.row+1][player.col] != SPEED_POTION || game_map[player.row+1][player.col] != DAMAGE_POTION ){
+                while(game_map[player.row+1][player.col] != WALLH && game_map[player.row+1][player.col] != WALLV && game_map[player.row+1][player.col] != WALLNO && game_map[player.row+1][player.col] != PILLAR && game_map[player.row+1][player.col] != END &&
+                game_map[player.row+1][player.col] != ANCIENTKEY &&game_map[player.row+1][player.col] != STAIRCASE && game_map[player.row+1][player.col] != REVEALEDTRAP && game_map[player.row+1][player.col] != HEALTH_POTION && 
+                game_map[player.row+1][player.col] != PASSWORDDOOR && game_map[player.row+1][player.col] != PASSWORD && game_map[player.row+1][player.col] != TRAP && game_map[player.row+1][player.col] != SPEED_POTION && game_map[player.row+1][player.col] != DAMAGE_POTION ){
                     movePlayer(player.row+1, player.col);
                 }
             }
             if(ch == 'h'){
-                while(game_map[player.row][player.col-1] != WALLH || game_map[player.row][player.col-1] != WALLV || game_map[player.row][player.col-1] != WALLNO || game_map[player.row][player.col-1] != PILLAR || game_map[player.row][player.col-1] != END ||
-                game_map[player.row][player.col-1] != ANCIENTKEY ||game_map[player.row][player.col-1] != STAIRCASE || game_map[player.row][player.col-1] != REVEALEDTRAP || game_map[player.row][player.col-1] != HEALTH_POTION || 
-                game_map[player.row][player.col-1] != PASSWORDDOOR || game_map[player.row][player.col-1] != PASSWORD || game_map[player.row][player.col-1] != TRAP || game_map[player.row][player.col-1] != SPEED_POTION || game_map[player.row][player.col-1] != DAMAGE_POTION ){
+                while(game_map[player.row][player.col-1] != WALLH && game_map[player.row][player.col-1] != WALLV && game_map[player.row][player.col-1] != WALLNO && game_map[player.row][player.col-1] != PILLAR && game_map[player.row][player.col-1] != END &&
+                game_map[player.row][player.col-1] != ANCIENTKEY &&game_map[player.row][player.col-1] != STAIRCASE && game_map[player.row][player.col-1] != REVEALEDTRAP && game_map[player.row][player.col-1] != HEALTH_POTION && 
+                game_map[player.row][player.col-1] != PASSWORDDOOR && game_map[player.row][player.col-1] != PASSWORD && game_map[player.row][player.col-1] != TRAP && game_map[player.row][player.col-1] != SPEED_POTION && game_map[player.row][player.col-1] != DAMAGE_POTION ){
                     movePlayer(player.row, player.col-1);
                 }
             }
             if(ch == 'b'){
-                while(game_map[player.row+1][player.col-1] != WALLH || game_map[player.row+1][player.col-1] != WALLV || game_map[player.row+1][player.col-1] != WALLNO || game_map[player.row+1][player.col-1] != PILLAR || game_map[player.row+1][player.col-1] != END ||
-                game_map[player.row+1][player.col-1] != ANCIENTKEY ||game_map[player.row+1][player.col-1] != STAIRCASE || game_map[player.row+1][player.col-1] != REVEALEDTRAP || game_map[player.row+1][player.col-1] != HEALTH_POTION || 
-                game_map[player.row+1][player.col-1] != PASSWORDDOOR || game_map[player.row+1][player.col-1] != PASSWORD || game_map[player.row+1][player.col-1] != TRAP || game_map[player.row+1][player.col-1] != SPEED_POTION || game_map[player.row+1][player.col-1] != DAMAGE_POTION ){
+                while(game_map[player.row+1][player.col-1] != WALLH && game_map[player.row+1][player.col-1] != WALLV && game_map[player.row+1][player.col-1] != WALLNO && game_map[player.row+1][player.col-1] != PILLAR && game_map[player.row+1][player.col-1] != END &&
+                game_map[player.row+1][player.col-1] != ANCIENTKEY &&game_map[player.row+1][player.col-1] != STAIRCASE && game_map[player.row+1][player.col-1] != REVEALEDTRAP && game_map[player.row+1][player.col-1] != HEALTH_POTION && 
+                game_map[player.row+1][player.col-1] != PASSWORDDOOR && game_map[player.row+1][player.col-1] != PASSWORD && game_map[player.row+1][player.col-1] != TRAP && game_map[player.row+1][player.col-1] != SPEED_POTION && game_map[player.row+1][player.col-1] != DAMAGE_POTION ){
                     movePlayer(player.row+1, player.col-1);
                 }
             }
             if(ch == 'n'){
-                while(game_map[player.row+1][player.col+1] != WALLH || game_map[player.row+1][player.col+1] != WALLV || game_map[player.row+1][player.col+1] != WALLNO || game_map[player.row+1][player.col+1] != PILLAR || game_map[player.row+1][player.col+1] != END ||
-                game_map[player.row+1][player.col+1] != ANCIENTKEY ||game_map[player.row+1][player.col+1] != STAIRCASE || game_map[player.row+1][player.col+1] != REVEALEDTRAP || game_map[player.row+1][player.col+1] != HEALTH_POTION || 
-                game_map[player.row+1][player.col+1] != PASSWORDDOOR || game_map[player.row+1][player.col+1] != PASSWORD || game_map[player.row+1][player.col+1] != TRAP || game_map[player.row+1][player.col+1] != SPEED_POTION || game_map[player.row+1][player.col+1] != DAMAGE_POTION ){
+                while(game_map[player.row+1][player.col+1] != WALLH && game_map[player.row+1][player.col+1] != WALLV && game_map[player.row+1][player.col+1] != WALLNO && game_map[player.row+1][player.col+1] != PILLAR && game_map[player.row+1][player.col+1] != END &&
+                game_map[player.row+1][player.col+1] != ANCIENTKEY &&game_map[player.row+1][player.col+1] != STAIRCASE && game_map[player.row+1][player.col+1] != REVEALEDTRAP && game_map[player.row+1][player.col+1] != HEALTH_POTION && 
+                game_map[player.row+1][player.col+1] != PASSWORDDOOR && game_map[player.row+1][player.col+1] != PASSWORD && game_map[player.row+1][player.col+1] != TRAP && game_map[player.row+1][player.col+1] != SPEED_POTION && game_map[player.row+1][player.col+1] != DAMAGE_POTION ){
                     movePlayer(player.row+1, player.col+1);
                 }
             }
