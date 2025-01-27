@@ -89,7 +89,15 @@ typedef struct {
     char email[100];
 } 
 User;
-
+typedef struct{
+    char name[20];
+    int hits;
+    int row;
+    int col;
+    int lives;
+} Monsters;
+Monsters monster[20];
+int monsters_count = 0;
 typedef struct {
     char username[50];
     int score;
@@ -143,6 +151,7 @@ void placegold(int row, int col, int roomRows, int roomCols);
 void placefood(int row, int col, int roomRows, int roomCols);
 void place_blackgold(int row, int col, int roomRows, int roomCols);
 void place_weapon(int row, int col, int roomRows, int roomCols);
+void place_monsters(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
@@ -614,10 +623,10 @@ void savehall(const HallOfFameEntry entry) {
                       &entries[count].games_finished,
                       &entries[count].first_game_time) == 5) {
             if (strcmp(entries[count].username, entry.username) == 0) {
-                entries[count].score = entry.score;
-                entries[count].gold_pieces = entry.gold_pieces;
-                entries[count].games_finished = entry.games_finished;
-                entries[count].first_game_time = entry.first_game_time;
+                entries[count].score += entry.score;
+                entries[count].gold_pieces += entry.gold_pieces;
+                entries[count].games_finished += entry.games_finished;
+                entries[count].first_game_time += entry.first_game_time;
                 updated = 1;
             }
             count++;
@@ -767,7 +776,7 @@ void printall() {
                 case SWALLNO: mvaddch(i, j, 'D'); break;
                 case GOLD:
                 attron(COLOR_PAIR(5));
-                mvaddch(i, j, 'G');
+                mvaddch(i, j, '*');
                 attroff(COLOR_PAIR(5));
                 break;
                 case ANCIENTKEY:  
@@ -1177,11 +1186,12 @@ int itoverlaps(int row, int col, int rowscount, int colscount){
     return 0;
 }
 void place_door(int row, int col) {
-    if (rand()%20 == 0) {
+    int random = rand();
+    if (random % 20 == 0) {
         game_map[row][col] = (game_map[row][col] == WALLH) ? SWALLH :
                              (game_map[row][col] == WALLV) ? SWALLV :
                              SWALLNO;
-    } else if (rand() % 13 == 0) { 
+    } else if (rand() % 16 == 0) { 
         game_map[row][col] = PASSWORDDOOR;
         int start_row = row, end_row = row, start_col = col, end_col = col;
         while (start_row > 0 && game_map[start_row - 1][col] != EMPTY && game_map[start_row - 1][col] != CORRIDOR ) start_row--;
@@ -1241,7 +1251,6 @@ void makeitvisible(int start_row,int start_col,int rowscount,int colscount){
 void generate_random_map(int staircase_row, int staircase_col, int staircase_roomRows, int staircase_roomCols) {
     srand(time(NULL));
     initialize_map();
-
     int roomcount = rand() % 5 + 6;
     int traproom = rand() % roomcount;
     int stairroom = rand() % (roomcount-1) + 1;
@@ -1249,7 +1258,6 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     int retry_count = 0;
     int extra_room = 0;
     room_index = 0;
-    //mvprintw(1,2, "im here");
     if (staircase_row >= 0 && staircase_col >= 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         placepotions(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
@@ -1281,6 +1289,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
             placenormalpotions(start_row, start_col, rowscount, colscount);
             placefood(start_row, start_col, rowscount, colscount);
             place_weapon(start_row, start_col, rowscount, colscount);
+            place_monsters(start_row, start_col, rowscount, colscount);
             place_blackgold(start_row, start_col, rowscount, colscount);
             rooms[room_index].center_x = start_col + colscount / 2;
             rooms[room_index].center_y = start_row + rowscount / 2;
@@ -1768,7 +1777,17 @@ void printMap() {
     else {
     mvaddch(player.row, player.col, 'P'); 
 }
-    
+    attron(COLOR_PAIR(1));
+    for(int i = 0 ; i < monsters_count; i++){
+        if(monster[i].row!=-1 && monster[i].col!= -1){
+            if(strcmp(monster[i].name, "Deamon") == 0) mvaddch(monster[i].row, monster[i].col, 'D');
+            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) mvaddch(monster[i].row, monster[i].col, 'F');
+            else if(strcmp(monster[i].name, "Giant") == 0) mvaddch(monster[i].row, monster[i].col, 'G');
+            else if(strcmp(monster[i].name, "Snake") == 0) mvaddch(monster[i].row, monster[i].col, 'S');
+            else if(strcmp(monster[i].name, "Undeed") == 0) mvaddch(monster[i].row, monster[i].col, 'U');
+        }
+    }
+    attroff(COLOR_PAIR(1));
     refresh();
 }
 void createrandompillar(int row, int col, int roomRows, int roomCols){
@@ -1941,6 +1960,74 @@ void place_weapon(int row, int col, int roomRows, int roomCols){
             if(random == 3) game_map[rown][coln] = MAGIC_WAND;
             if(random == 4) game_map[rown][coln] = NORMAL_ARROW;
             if(random == 5) game_map[rown][coln] = SWORD;
+        }
+    }
+}
+void place_monsters(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 3;
+    while(count --){
+        int which = rand() % 5;
+        int rown = (rand() %(roomRows - 2)) + row + 1;
+        int coln = (rand()%(roomCols - 2) )+ col + 1;
+        if(which == 0){
+            if(game_map[rown][coln]!= WALLH &&game_map[rown][coln]!= WALLV && game_map[rown][coln]!= WALLNO && 
+            game_map[rown][coln]!= SWALLH && game_map[rown][coln]!= SWALLV &&game_map[rown][coln]!= SWALLNO &&
+            game_map[rown][coln]!= DOOR && game_map[rown][coln]!= PASSWORDDOOR){
+                monster[monsters_count].row = rown;
+                monster[monsters_count].col = coln;
+                monster[monsters_count].hits = 0;
+                monster[monsters_count].lives = 5;
+                strcpy(monster[monsters_count].name, "Deamon");
+                monsters_count ++;
+            }
+        }
+        else if(which == 1){
+            if(game_map[rown][coln]!= WALLH &&game_map[rown][coln]!= WALLV && game_map[rown][coln]!= WALLNO && 
+            game_map[rown][coln]!= SWALLH && game_map[rown][coln]!= SWALLV &&game_map[rown][coln]!= SWALLNO &&
+            game_map[rown][coln]!= DOOR && game_map[rown][coln]!= PASSWORDDOOR){
+                monster[monsters_count].row = rown;
+                monster[monsters_count].col = coln;
+                monster[monsters_count].hits = 0;
+                monster[monsters_count].lives = 10;
+                strcpy(monster[monsters_count].name, "Fire Breathing Monster");
+                monsters_count ++;
+            }
+        }
+        else if(which == 2){
+            if(game_map[rown][coln]!= WALLH &&game_map[rown][coln]!= WALLV && game_map[rown][coln]!= WALLNO && 
+            game_map[rown][coln]!= SWALLH && game_map[rown][coln]!= SWALLV &&game_map[rown][coln]!= SWALLNO &&
+            game_map[rown][coln]!= DOOR && game_map[rown][coln]!= PASSWORDDOOR){
+                monster[monsters_count].row = rown;
+                monster[monsters_count].col = coln;
+                monster[monsters_count].hits = 0;
+                strcpy(monster[monsters_count].name, "Giant");
+                monster[monsters_count].lives = 15;
+                monsters_count ++;
+            }
+        }
+        else if(which == 3){
+            if(game_map[rown][coln]!= WALLH &&game_map[rown][coln]!= WALLV && game_map[rown][coln]!= WALLNO && 
+            game_map[rown][coln]!= SWALLH && game_map[rown][coln]!= SWALLV &&game_map[rown][coln]!= SWALLNO &&
+            game_map[rown][coln]!= DOOR && game_map[rown][coln]!= PASSWORDDOOR){
+                monster[monsters_count].row = rown;
+                monster[monsters_count].col = coln;
+                monster[monsters_count].hits = 0;
+                strcpy(monster[monsters_count].name, "Snake");
+                monster[monsters_count].lives = 20;
+                monsters_count ++;
+            }
+        }
+        else if(which == 4){
+            if(game_map[rown][coln]!= WALLH &&game_map[rown][coln]!= WALLV && game_map[rown][coln]!= WALLNO && 
+            game_map[rown][coln]!= SWALLH && game_map[rown][coln]!= SWALLV &&game_map[rown][coln]!= SWALLNO &&
+            game_map[rown][coln]!= DOOR && game_map[rown][coln]!= PASSWORDDOOR){
+                monster[monsters_count].row = rown;
+                monster[monsters_count].col = coln;
+                monster[monsters_count].hits = 0;
+                strcpy(monster[monsters_count].name, "Undeed");
+                monster[monsters_count].lives = 30;
+                monsters_count ++;
+            }
         }
     }
 }
