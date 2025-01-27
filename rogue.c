@@ -38,7 +38,14 @@ typedef enum {
     SPEED_POTION = 19,
     DAMAGE_POTION = 20,
     END = 21,
-    GOLD = 22
+    GOLD = 22,
+    nFOOD = 23,
+    BLACKGOLD = 24,
+    MACE = 25,
+    DAGGER = 26,
+    MAGIC_WAND = 27,
+    NORMAL_ARROW = 28,
+    SWORD = 29
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -61,6 +68,12 @@ typedef struct {
     int dps;
     int sps;
     int golds;
+    int normal_food;
+    int mace;
+    int dagger;
+    int magic_wand;
+    int normal_arrow;
+    int sword;
 } Player;
 Player player;
 typedef struct {
@@ -127,22 +140,24 @@ void trapsfortreasure(int row, int col, int roomRows, int roomCols);
 void endpoint(int row, int col, int roomRows, int roomCols);
 void placenormalpotions(int row, int col, int roomRows, int roomCols);
 void placegold(int row, int col, int roomRows, int roomCols);
+void placefood(int row, int col, int roomRows, int roomCols);
+void place_blackgold(int row, int col, int roomRows, int roomCols);
+void place_weapon(int row, int col, int roomRows, int roomCols);
 int main() {
     initscr();
     start_color();
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
-    //nodelay(stdscr, TRUE);
-    //setlocale(LC_ALL, ""); 
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
     init_pair(4, COLOR_BLUE, COLOR_BLACK);
-    //init_color(COLOR_CYAN, 255, 255, 0);  
     init_pair(4, COLOR_CYAN, COLOR_BLACK);
     init_pair(5, COLOR_YELLOW, COLOR_BLACK); 
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
+    init_pair(7, COLOR_BLACK, COLOR_WHITE);
+    init_pair(8, COLOR_MAGENTA, COLOR_WHITE);
     main_menu();
     endwin();
     return 0;
@@ -251,19 +266,13 @@ void registeruser() {
     char username[50] = {0}, password[50] = {0}, email[100] = {0};
     int ch, i = 0;
     while (1) {
-    mvwprintw(win, 3, 2, "Username: ");
-    mvwprintw(win, 3, 12, "                     ");
-    //mvwprintw(win, 8, 2, "                                       ");
-    //mvwprintw(win, 10, 2, "DEBUG: Before username input"); // Debugging
+    mvwprintw(win, 4, 2, "Username: ");
+    mvwprintw(win, 4, 12, "                     ");
     wrefresh(win);
-
     i = 0;
     memset(username, 0, sizeof(username));
     while (1) {
         ch = wgetch(win);
-        //mvwprintw(win, 11, 2, "DEBUG: Username char = %c", ch); // Debugging character
-        //wrefresh(win);
-
         if (ch == '\n' || ch == 10 || ch == '\r' || ch == KEY_ENTER) {
             username[i] = '\0'; // Null-terminate username
             //mvwprintw(win, 12, 2, "DEBUG: Username entered = %s", username); // Debugging username
@@ -272,22 +281,18 @@ void registeruser() {
         } else if (ch == KEY_BACKSPACE || ch == 127) {
             if (i > 0) {
                 i--;
-                mvwaddch(win, 3, 12 + i, ' ');
-                wmove(win, 3, 12 + i);
+                mvwaddch(win, 4, 12 + i, ' ');
+                wmove(win, 4, 12 + i);
             }
         } else if (i < 49 && isprint(ch)) {
             username[i++] = ch;
-            mvwaddch(win, 3, 12 + i - 1, ch);
+            mvwaddch(win, 4, 12 + i - 1, ch);
         }
         else if(ch == 27) {
             startplaying();
         }
         wrefresh(win);
     }
-    // mvwprintw(win, 9, 2, "DEBUG: Captured Username = %s", username);
-    // mvwprintw(win, 13, 2, "                                        ");
-    // mvwprintw(win, 13, 2, "DEBUG: Checking if user exists"); // Debugging
-    // wrefresh(win);
 
     if (user_exists(username)) {
         wattron(win, COLOR_PAIR(1));
@@ -301,10 +306,10 @@ void registeruser() {
 
 }
 flushinp();
-mvwprintw(win, 5, 2, "                               ");
+mvwprintw(win, 5, 2, "                                               ");
     while (1) {
         mvwprintw(win, 6, 2, "Password: ");
-        mvwprintw(win, 6,12, "                     ");
+        mvwprintw(win, 6,12, "                                 ");
         //mvwprintw(win, 8, 2, "                                       ");
         wrefresh(win);
         i = 0;
@@ -328,21 +333,25 @@ mvwprintw(win, 5, 2, "                               ");
         password[i] = '\0';
 
         if(validate_password(password)==1){
+            mvwprintw(win, 7,2, "                                              ");
             wattron(win, COLOR_PAIR(1));
             mvwprintw(win, 7,2, "Too short! must include at least 7 characters");
             wattroff(win, COLOR_PAIR(1));
         }
         else if(validate_password(password)==2){
+            mvwprintw(win, 7,2, "                                              ");
             wattron(win, COLOR_PAIR(1));
             mvwprintw(win, 7, 2, "Must include at least one digit!");
             wattroff(win, COLOR_PAIR(1));
         }
         else if(validate_password(password)==3){
+            mvwprintw(win, 7,2, "                                              ");
             wattron(win, COLOR_PAIR(1));
             mvwprintw(win, 7, 2, "Must include at least one uppercase character!");
             wattroff(win, COLOR_PAIR(1));
         }
         else if(validate_password(password)==4){
+            mvwprintw(win, 7,2, "                                              ");
             wattron(win, COLOR_PAIR(1));
             mvwprintw(win, 7, 2, "Must include at least one lowercase character!");
             wattroff(win, COLOR_PAIR(1));
@@ -353,13 +362,11 @@ mvwprintw(win, 5, 2, "                               ");
         wrefresh(win);
     }
     flushinp();
-    mvwprintw(win, 7, 2, "                                              ");
+    mvwprintw(win, 7, 2, "                                               ");
     while(1){
         mvwprintw(win, 8, 2, "Email: ");
-        mvwprintw(win, 8,12, "                                        ");
-        //mvwprintw(win, 8, 2, "                                       ");
+        mvwprintw(win, 8,12, "                                  ");
         wrefresh(win);
-        //mvwgetnstr(win, 5, 12, email, 99);
         i=0;
         memset(email, 0, sizeof(email));
         while(1){
@@ -383,8 +390,6 @@ mvwprintw(win, 5, 2, "                               ");
             }
             wrefresh(win);
         }
-        // mvwprintw(win, 13, 2, "                                        ");
-        // wrefresh(win);
         if (!validate_email(email)) {
             wattron(win, COLOR_PAIR(1));
             mvwprintw(win, 9, 2, "Invalid Email!");
@@ -404,7 +409,6 @@ mvwprintw(win, 5, 2, "                               ");
     save_user(user);
 
     wattron(win, COLOR_PAIR(2));
-    mvwprintw(win, 8, 2, "                                       ");
     mvwprintw(win, 10, 2, "Registered successfully!");
     wattroff(win, COLOR_PAIR(2));
     wrefresh(win);
@@ -500,7 +504,7 @@ void login(){
         }
     }
     flushinp();
-    mvwprintw(win, 5, 2, "                                                ");
+    mvwprintw(win, 5, 2, "                                               ");
     while(1){
         mvwprintw(win, 6, 2, "Password: ");
         mvwprintw(win, 6, 12, "                           ");
@@ -686,36 +690,36 @@ void displayhalloffame(){
         for(int i=start; i<end; i++){
             int row= 3 +i- start;
             if(strcmp(entries[i].username, current_username)==0){
-                attron(A_BOLD);
+                attron(A_ITALIC);
             }
             if(i==0){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "🥇 legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "1.legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
                          entries[i].games_finished,
-                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                         ((time(NULL) - entries[i].first_game_time) / (60 * 60 * 24))%50);
                 wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else if(i==1){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "🥈 legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "2.legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
                          entries[i].games_finished,
-                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                         ((time(NULL) - entries[i].first_game_time) / (60 * 60 * 24))%50);
                 wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else if(i==2){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "🥉 legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "3.legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
                          entries[i].games_finished,
-                         (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                         ((time(NULL) - entries[i].first_game_time) / (60 * 60 * 24))%50);
                 wattroff(stdscr, COLOR_PAIR(3) | A_BOLD);
             }
             else {
@@ -725,10 +729,10 @@ void displayhalloffame(){
                      entries[i].score,
                      entries[i].gold_pieces,
                      entries[i].games_finished,
-                     (time(NULL) - entries[i].first_game_time) / (60 * 60 * 24));
+                     ((time(NULL) - entries[i].first_game_time) / (60 * 60 * 24))%50);
         }
                      if(strcmp(entries[i].username, current_username)==0){
-                        attroff(A_BOLD);
+                        attroff(A_ITALIC);
                      }
         }
         mvprintw(LINES -2, 2, "Use UP/DOWN to switch pages, ESC to exit.");
@@ -806,18 +810,26 @@ void game_area(){
     player.health = 5;
     player.ancientkeys = 0;
     player.brokenkeys = 0;
+    player.mace = 1;
+    player.dagger = 0;
+    player.magic_wand = 0;
+    player.normal_arrow = 0;
+    player.normal_food = 0;
+    player.sword = 0;
     strcpy(entry.username, current_username);
     current_floor = 0;
-    //HallOfFameEntry entry = {0};
+    if(!load_user_data(&entry)){
+         entry.first_game_time = time(NULL);
+    }
     generate_random_map(-1, -1, 0, 0);
     removeUnconnectedDoors();
-    while(1){
+    while(player.health != 0){
         printMap();
         mvprintw(35, 10, "Health: %d", player.health);
         mvprintw(35, 40, "ancient keys: %d", player.ancientkeys);
         mvprintw(35, 70, "broken keys: %d", player.brokenkeys);
         mvprintw(35, 100, "Total score: %d", entry.score);
-        mvprintw(35, 130, "Gold: %d", entry.gold_pieces);
+        mvprintw(35, 130, "Gold: %d", player.golds);
         refresh();
 
         int ch = getch();
@@ -857,6 +869,67 @@ void game_area(){
             return;
         case 'm':
             printall();
+            break;
+        case 'i':
+            WINDOW *winn = newwin(13, 50, 5, 10);
+            keypad(winn, TRUE);
+            box(winn, 0, 0);
+            mvwprintw(winn, 1, 2, "-LIST OF WEAPONS-");
+            if(player.mace != 0)mvwprintw(winn, 3, 2, "You have %d mace(s)", player.mace);
+            if(player.mace == 0)mvwprintw(winn, 3, 2, "You don't have any maces");
+            if(player.dagger != 0) mvwprintw(winn, 5, 2, "You have %d dagger(s)", player.dagger);
+            if(player.dagger == 0) mvwprintw(winn, 5, 2, "You don't have any daggers");
+            if(player.magic_wand != 0) mvwprintw(winn, 7, 2, "You have %d magic wand(s)", player.magic_wand);
+            if(player.magic_wand == 0) mvwprintw(winn, 7, 2, "You don't have any magic wands");
+            if(player.normal_arrow != 0) mvwprintw(winn, 9, 2, "You have %d normal arrow(s)", player.normal_arrow);
+            if(player.normal_arrow == 0) mvwprintw(winn, 9, 2, "You don't have any normal arrows");
+            if(player.sword != 0) mvwprintw(winn, 11, 2, "You have %d sword(s)", player.sword);
+            if(player.sword == 0) mvwprintw(winn, 11, 2, "You don't have any swords");
+            wrefresh(winn);
+            getch();
+            delwin(winn);
+            break;
+        case 'e':
+            WINDOW *win = newwin(14, 50, 5, 10);
+            keypad(win, TRUE);
+            box(win, 0, 0);
+            mvwprintw(win, 1, 2, "-LIST OF FOODS-");
+            mvwprintw(win, 3, 2, "hunger : %d", 5-player.health);
+            mvwprintw(win,5, 2, "you have %d normal foods with you.", player.normal_food);
+            mvwprintw(win, 7, 2, "do you want to consume food? (y/n)");
+            wrefresh(win);
+            ch = getch();
+            if(ch == 'y') {
+                if(player.normal_food == 0){
+                    wattron(win, COLOR_PAIR(1));
+                    mvwprintw(win, 9, 2, "You don't have any food with you");
+                    wattroff(win, COLOR_PAIR(1));
+                    wrefresh(win);
+                    getch();
+                    delwin(win);
+                }
+                else if(player.health < 5){
+                    wattron(win, COLOR_PAIR(2));
+                    mvwprintw(win, 9, 2, "food consumed successfully!");
+                    wattroff(win, COLOR_PAIR(2));
+                    player.normal_food --;
+                    player.health ++;
+                    wrefresh(win);
+                    getch();
+                    delwin(win);
+                }
+                else{
+                    wattron(win, COLOR_PAIR(1));
+                    mvwprintw(win, 9, 2, "You are not hungry right now!");
+                    wattroff(win, COLOR_PAIR(1));
+                    wrefresh(win);
+                    getch();
+                    delwin(win);
+                }
+            }
+            else if(ch == 'n' || ch == 127){
+                delwin(win);
+            }
             break;
         case 'f':
             ch = getch();
@@ -924,6 +997,9 @@ void game_area(){
             break;
         }
     }
+    attron(COLOR_PAIR(1));
+    mvprintw(17, 75, "You lost :( Try again?");
+    attroff(COLOR_PAIR(1));
     refresh();
 }
 int load_user_data(HallOfFameEntry *entry){
@@ -1171,26 +1247,26 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     int stairroom = rand() % (roomcount-1) + 1;
     int ancientkeyroom = rand() % roomcount;
     int retry_count = 0;
-    int g = 0;
+    int extra_room = 0;
     room_index = 0;
     //mvprintw(1,2, "im here");
     if (staircase_row >= 0 && staircase_col >= 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         placepotions(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         placegold(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
+        place_blackgold(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         createrandompillar(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         makeitvisible(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
         rooms[room_index].center_x = staircase_col + staircase_roomCols / 2;
         rooms[room_index].center_y = staircase_row + staircase_roomRows / 2;
         rooms[room_index].width = staircase_roomCols;
         rooms[room_index].length = staircase_roomRows;
-        //game_map[player.row][player.col] = STAIRCASE;
         room_index++;
-        g =1;
+        extra_room =1;
     }
     for (int i = 0; i < roomcount; i++) {
-        if(g){
-            g=0; 
+        if(extra_room){
+            extra_room=0; 
             roomcount --;
         }
         int start_row = rand() % (MAXROW - 9);
@@ -1203,6 +1279,9 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
             placegold(start_row, start_col, rowscount, colscount);
             createrandompillar(start_row, start_col, rowscount, colscount);
             placenormalpotions(start_row, start_col, rowscount, colscount);
+            placefood(start_row, start_col, rowscount, colscount);
+            place_weapon(start_row, start_col, rowscount, colscount);
+            place_blackgold(start_row, start_col, rowscount, colscount);
             rooms[room_index].center_x = start_col + colscount / 2;
             rooms[room_index].center_y = start_row + rowscount / 2;
             rooms[room_index].width = colscount;
@@ -1254,6 +1333,9 @@ void removeUnconnectedDoors() {
     }
 }
 void movePlayer(int newRow, int newCol) {
+    if(rand()%100 == 1){
+        player.health--;
+    }
     if (newRow >= 0 && newRow < MAXROW && newCol >= 0 && newCol < MAXCOL &&
         (game_map[newRow][newCol] == FLOOR || game_map[newRow][newCol] == DOOR || game_map[newRow][newCol] == CORRIDOR || game_map[newRow][newCol]==SWALLH || game_map[newRow][newCol] == SWALLV || game_map[newRow][newCol] == SWALLNO || game_map[newRow][newCol] == STAIRCASE)) {
         player.row = newRow;
@@ -1278,12 +1360,60 @@ void movePlayer(int newRow, int newCol) {
         player.col = newCol;
         }
     }
+    if(game_map[newRow][newCol] == MACE){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.mace ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == DAGGER){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.dagger ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == MAGIC_WAND){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.magic_wand ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == NORMAL_ARROW){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.normal_arrow ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == SWORD){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.sword ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
     if (game_map[newRow][newCol] == PASSWORD) {
     generatedoorpass();
     mvprintw(1, 75, "%s", pass);
     refresh();
     napms(10000);
 }
+    if(game_map[newRow][newCol] == nFOOD){
+        if(g && player.normal_food <5){
+            game_map[newRow][newCol] = FLOOR;
+            player.normal_food ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
 if(game_map[newRow][newCol] == GOLD){
     if(g){game_map[newRow][newCol] = FLOOR;
     player.row = newRow;
@@ -1294,6 +1424,17 @@ if(game_map[newRow][newCol] == GOLD){
     player.col = newCol;
     }
 }
+if(game_map[newRow][newCol] == BLACKGOLD){
+    if(g){game_map[newRow][newCol] = FLOOR;
+    player.row = newRow;
+    player.col = newCol;
+    player.golds += 5;}
+    else{
+    player.row = newRow;
+    player.col = newCol;
+    }
+}
+
 if (game_map[newRow][newCol] == PASSWORDDOOR) {
     if (unlocked[newRow][newCol]) {
         player.row = newRow;
@@ -1421,7 +1562,7 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
         while (end_col < MAXCOL - 1 && game_map[newRow][end_col + 1] != EMPTY && game_map[newRow][end_col + 1] != CORRIDOR) end_col++;
         int room_rows = end_row - start_row + 1;
         int room_cols = end_col - start_col + 1;
-        //HallOfFameEntry entry = {0};
+        
         
     if(load_user_data(&entry)){
         entry.score = entry.score + player.golds * (current_floor+1) / 3;
@@ -1443,9 +1584,9 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
     }
 
 
-    if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
+if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
     || game_map[newRow][newCol]==SWALLV || game_map[newRow][newCol]==SWALLNO
-    || game_map[newRow][newCol]==PASSWORDDOOR) {
+    || (game_map[newRow][newCol]==PASSWORDDOOR && unlocked[newRow][newCol])) {
         int k=0;
         for(int i=0; game_map[newRow + i][newCol]!= EMPTY && game_map[newRow + i][newCol]!= CORRIDOR; i++){
             k++;
@@ -1564,6 +1705,41 @@ void printMap() {
                 mvaddch(i, j, 'G');
                 attroff(COLOR_PAIR(5));
                 break;
+                case BLACKGOLD:
+                attron(COLOR_PAIR(7));
+                mvaddch(i, j, 'G');
+                attroff(COLOR_PAIR(7));
+                break;
+                case nFOOD:
+                attron(COLOR_PAIR(2));
+                mvaddch(i, j, 'f');
+                attroff(COLOR_PAIR(2));
+                break;
+                case MACE:
+                attron(COLOR_PAIR(8));
+                mvaddch(i , j, 'M');
+                attroff(COLOR_PAIR(8));
+                break;
+                case DAGGER:
+                attron(COLOR_PAIR(8));
+                mvaddch(i, j, 'D');
+                attroff(COLOR_PAIR(8));
+                break;
+                case MAGIC_WAND:
+                attron(COLOR_PAIR(8));
+                mvaddch(i, j, 'W');
+                attroff(COLOR_PAIR(8));
+                break;
+                case NORMAL_ARROW:
+                attron(COLOR_PAIR(8));
+                mvaddch(i, j, 'A');
+                attroff(COLOR_PAIR(8));
+                break;
+                case SWORD:
+                attron(COLOR_PAIR(8));
+                mvaddch(i, j, 'S');
+                attroff(COLOR_PAIR(8));
+                break;
                 case END: 
                 attron(COLOR_PAIR(6));
                 mvaddch(i, j, '~');
@@ -1624,8 +1800,6 @@ void placestaircase(int row, int col, int roomRows, int roomCols){
     int coln = (rand() % (roomCols - 2)) + col + 1;
     if(game_map[rown][coln] == FLOOR) {
     game_map[rown][coln] = STAIRCASE;
-    //stairs[current_floor].firstfloor = current_floor;
-    //stairs[current_floor].secondfloor = current_floor +1;
     }
     else{
         placestaircase(row, col, roomRows, roomCols);
@@ -1736,7 +1910,37 @@ void placegold(int row, int col, int roomRows, int roomCols){
     while(count -- ){
         int rown = (rand() % (roomRows-2)) + row + 1;
         int coln = (rand()%(roomCols-2)) + col + 1;
-        int random = rand() % 3 + 1;
         if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = GOLD;
+    }
+}
+void place_blackgold(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 3;
+    while(count --){
+        int rown = (rand() % (roomRows - 2)) + row + 1;
+        int coln = (rand() % (roomCols - 2)) + col + 1;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = BLACKGOLD;
+    }
+}
+void placefood(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 3 + 1;
+    while(count --){
+        int rown = (rand() %(roomRows - 2)) + row + 1;
+        int coln = (rand() % (roomCols - 2)) + col + 1;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = nFOOD;
+    }
+}
+void place_weapon(int row, int col, int roomRows, int roomCols){
+    int count = rand() % 4;
+    while(count --){
+        int rown = (rand() % (roomRows - 2)) + row + 1;
+        int coln = (rand() % (roomCols - 2)) + col + 1;
+        if(game_map[rown][coln] == FLOOR){
+            int random = rand() % 5 + 1;
+            if(random == 1) game_map[rown][coln] = MACE;
+            if(random == 2) game_map[rown][coln] = DAGGER;
+            if(random == 3) game_map[rown][coln] = MAGIC_WAND;
+            if(random == 4) game_map[rown][coln] = NORMAL_ARROW;
+            if(random == 5) game_map[rown][coln] = SWORD;
+        }
     }
 }
