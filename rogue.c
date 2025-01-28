@@ -1396,7 +1396,7 @@ void movePlayer(int newRow, int newCol) {
     if(game_map[newRow][newCol] == DAGGER){
         if(g){
             game_map[newRow][newCol] = FLOOR;
-            player.dagger ++;
+            player.dagger += 12;
         }
         player.row = newRow;
         player.col = newCol;
@@ -1404,7 +1404,7 @@ void movePlayer(int newRow, int newCol) {
     if(game_map[newRow][newCol] == MAGIC_WAND){
         if(g){
             game_map[newRow][newCol] = FLOOR;
-            player.magic_wand ++;
+            player.magic_wand += 8;
         }
         player.row = newRow;
         player.col = newCol;
@@ -1412,7 +1412,7 @@ void movePlayer(int newRow, int newCol) {
     if(game_map[newRow][newCol] == NORMAL_ARROW){
         if(g){
             game_map[newRow][newCol] = FLOOR;
-            player.normal_arrow ++;
+            player.normal_arrow += 20;
         }
         player.row = newRow;
         player.col = newCol;
@@ -1645,7 +1645,7 @@ if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
     for(int i =0; i<monsters_count; i++){
         if(player.row >= monster[i].row - 1 && player.row <= monster[i].row + 1
         && player.col >= monster[i].col - 1 && player.col <= monster[i].col + 1 
-        && monster[i].hits < monster[i].lives)
+        && monster[i].hits < monster[i].lives && monster[i].moves < monster[i].max_moves)
         monster[i].moving = 1;
     }
 
@@ -2001,6 +2001,8 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
                 monster[monsters_count].lives = 5;
+                monster[monsters_count].max_moves = 0;
+                monster[monsters_count].moves = 0;
                 strcpy(monster[monsters_count].name, "Deamon");
                 monster[monsters_count].moving = 0;
                 monsters_count ++;
@@ -2014,6 +2016,8 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
                 monster[monsters_count].lives = 10;
+                monster[monsters_count].moves = 0;
+                monster[monsters_count].max_moves = 0;
                 strcpy(monster[monsters_count].name, "Fire Breathing Monster");
                 monster[monsters_count].moving = 0;
                 monsters_count ++;
@@ -2026,6 +2030,8 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
+                monster[monsters_count].moves = 0;
+                monster[monsters_count].max_moves = 5;
                 strcpy(monster[monsters_count].name, "Giant");
                 monster[monsters_count].lives = 15;
                 monster[monsters_count].moving = 0;
@@ -2039,6 +2045,8 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
+                monster[monsters_count].max_moves = 200;
+                monster[monsters_count].moves = 0;
                 strcpy(monster[monsters_count].name, "Snake");
                 monster[monsters_count].lives = 20;
                 monster[monsters_count].moving = 0;
@@ -2052,6 +2060,8 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
+                monster[monsters_count].max_moves = 5;
+                monster[monsters_count].moves = 0;
                 strcpy(monster[monsters_count].name, "Undeed");
                 monster[monsters_count].lives = 30;
                 monster[monsters_count].moving = 0;
@@ -2072,48 +2082,69 @@ void move_monsters(){
             int room_cols = end_col - start_col + 1;
             if(start_row <= player.row && player.row <= end_row
             && start_col <=player.col && player.col <= end_col){
-                    if(player.row > monster[i].row && game_map[monster[i].row + 1][monster[i].col] != WALLV
+                    if(player.row >= monster[i].row && game_map[monster[i].row + 1][monster[i].col] != WALLV
                     && game_map[monster[i].row + 1][monster[i].col] != WALLH && game_map[monster[i].row + 1][monster[i].col] != WALLNO &&
                     game_map[monster[i].row + 1][monster[i].col] != DOOR && game_map[monster[i].row + 1][monster[i].col] != PASSWORDDOOR &&
                     game_map[monster[i].row + 1][monster[i].col] != SWALLH && game_map[monster[i].row + 1][monster[i].col] != SWALLV && game_map[monster[i].row + 1][monster[i].col] != SWALLNO
                     && game_map[monster[i].row + 1][monster[i].col] != PILLAR){
-                        monster[i].row ++;
+                       if(player.row != monster[i].row  + 1 && player.col != monster[i].col) monster[i].row ++;
+                       else {
+                            attron(COLOR_PAIR(1));
+                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
+                            attroff(COLOR_PAIR(1));
+                            getch();
+                        }
+                        monster[i].moves ++;
                     }
-                    else if(player.row < monster[i].row && game_map[monster[i].row - 1][monster[i].col] != WALLV
+                    else if(player.row <= monster[i].row && game_map[monster[i].row - 1][monster[i].col] != WALLV
                     && game_map[monster[i].row - 1][monster[i].col] != WALLH && game_map[monster[i].row - 1][monster[i].col] != WALLNO &&
                     game_map[monster[i].row - 1][monster[i].col] != DOOR && game_map[monster[i].row - 1][monster[i].col] != PASSWORDDOOR &&
                     game_map[monster[i].row - 1][monster[i].col] != SWALLH && game_map[monster[i].row - 1][monster[i].col] != SWALLV && game_map[monster[i].row - 1][monster[i].col] != SWALLNO
                     && game_map[monster[i].row - 1][monster[i].col] != PILLAR){
-                        monster[i].row --;
+                        if(player.row != monster[i].row -1 && player.col != monster[i].col)monster[i].row --;
+                        else {
+                            attron(COLOR_PAIR(1));
+                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
+                            attroff(COLOR_PAIR(1));
+                            player.health --;
+                            getch();
+                        }
+                        monster[i].moves ++;
                     }
                     
-                    if(player.col > monster[i].col && game_map[monster[i].row ][monster[i].col + 1] != WALLV
+                    else if(player.col >= monster[i].col && game_map[monster[i].row ][monster[i].col + 1] != WALLV
                     && game_map[monster[i].row ][monster[i].col + 1] != WALLH && game_map[monster[i].row][monster[i].col + 1] != WALLNO &&
                     game_map[monster[i].row][monster[i].col + 1] != DOOR && game_map[monster[i].row][monster[i].col + 1] != PASSWORDDOOR &&
                     game_map[monster[i].row][monster[i].col + 1] != SWALLH && game_map[monster[i].row][monster[i].col + 1] != SWALLV && game_map[monster[i].row][monster[i].col+1] != SWALLNO
                     && game_map[monster[i].row][monster[i].col + 1] != PILLAR){
-                        monster[i].col ++;
+                        if(player.row != monster[i].row && player.col != monster[i].col + 1)monster[i].col ++;
+                        else {
+                            attron(COLOR_PAIR(1));
+                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
+                            attroff(COLOR_PAIR(1));
+                            getch();
+                        }
+                        monster[i].moves ++;
                     }
-                    else if(player.col < monster[i].col && game_map[monster[i].row][monster[i].col-1] != WALLV
+                    else if(player.col <= monster[i].col && game_map[monster[i].row][monster[i].col-1] != WALLV
                     && game_map[monster[i].row][monster[i].col-1] != WALLH && game_map[monster[i].row][monster[i].col-1] != WALLNO &&
                     game_map[monster[i].row][monster[i].col-1] != DOOR && game_map[monster[i].row][monster[i].col-1] != PASSWORDDOOR &&
                     game_map[monster[i].row][monster[i].col-1] != SWALLH && game_map[monster[i].row][monster[i].col-1] != SWALLV && game_map[monster[i].row][monster[i].col-1] != SWALLNO
                     && game_map[monster[i].row][monster[i].col-1] != PILLAR){
-                        monster[i].col --;
+                        if(player.row != monster[i].row && player.col != monster[i].col - 1)monster[i].col --;
+                        else {
+                            attron(COLOR_PAIR(1));
+                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
+                            attroff(COLOR_PAIR(1));
+                            getch();
+                        }
+                        monster[i].moves ++;
                     }
                 
             }
-            if(game_map[monster[i].row][monster[i].col] == WALLH){
-                monster[i].row ++;
+            if(monster[i].moves >= monster[i].max_moves){
+                monster[i].moving = 0;
             }
-            if(player.row == monster[i].row && player.col == monster[i].col){
-                //player.health --;
-                attron(COLOR_PAIR(1));
-                mvprintw(1, 2, "You got hit by %s", monster[i].name);
-                attroff(COLOR_PAIR(1));
-                refresh();
-                monster[i].row --;
-            } 
         }
     }
 }
