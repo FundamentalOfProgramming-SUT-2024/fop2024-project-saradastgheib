@@ -107,6 +107,7 @@ typedef struct{
     int moving;
     int moves;
     int max_moves;
+    int alive;
 } Monsters;
 Monsters monster[20];
 int monsters_count = 0;
@@ -2028,11 +2029,11 @@ void printMap() {
     attron(COLOR_PAIR(1));
     for(int i = 0 ; i < monsters_count; i++){
         if(monster[i].row!=-1 && monster[i].col!= -1){
-            if(strcmp(monster[i].name, "Deamon") == 0 && visible[monster[i].row][monster[i].col]) mvaddch(monster[i].row, monster[i].col, 'D');
-            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0 && visible[monster[i].row][monster[i].col]) mvaddch(monster[i].row, monster[i].col, 'F');
-            else if(strcmp(monster[i].name, "Giant") == 0 && visible[monster[i].row][monster[i].col]) mvaddch(monster[i].row, monster[i].col, 'G');
-            else if(strcmp(monster[i].name, "Snake") == 0 && visible[monster[i].row][monster[i].col]) mvaddch(monster[i].row, monster[i].col, 'S');
-            else if(strcmp(monster[i].name, "Undeed") == 0 && visible[monster[i].row][monster[i].col]) mvaddch(monster[i].row, monster[i].col, 'U');
+            if(strcmp(monster[i].name, "Deamon") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'D');
+            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'F');
+            else if(strcmp(monster[i].name, "Giant") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'G');
+            else if(strcmp(monster[i].name, "Snake") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'S');
+            else if(strcmp(monster[i].name, "Undeed") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'U');
         }
     }
     attroff(COLOR_PAIR(1));
@@ -2234,6 +2235,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].lives = 5;
                 monster[monsters_count].max_moves = 0;
                 monster[monsters_count].moves = 0;
+                monster[monsters_count].alive = 1;
                 strcpy(monster[monsters_count].name, "Deamon");
                 monster[monsters_count].moving = 0;
                 monsters_count ++;
@@ -2247,8 +2249,9 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
                 monster[monsters_count].lives = 10;
-                monster[monsters_count].moves = 0;
                 monster[monsters_count].max_moves = 0;
+                monster[monsters_count].moves = 0;
+                monster[monsters_count].alive = 1;
                 strcpy(monster[monsters_count].name, "Fire Breathing Monster");
                 monster[monsters_count].moving = 0;
                 monsters_count ++;
@@ -2263,6 +2266,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].hits = 0;
                 monster[monsters_count].moves = 0;
                 monster[monsters_count].max_moves = 5;
+                monster[monsters_count].alive = 1;
                 strcpy(monster[monsters_count].name, "Giant");
                 monster[monsters_count].lives = 15;
                 monster[monsters_count].moving = 0;
@@ -2276,6 +2280,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
+                monster[monsters_count].alive = 1;
                 monster[monsters_count].max_moves = 200;
                 monster[monsters_count].moves = 0;
                 strcpy(monster[monsters_count].name, "Snake");
@@ -2293,6 +2298,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].hits = 0;
                 monster[monsters_count].max_moves = 5;
                 monster[monsters_count].moves = 0;
+                monster[monsters_count].alive = 1;
                 strcpy(monster[monsters_count].name, "Undeed");
                 monster[monsters_count].lives = 30;
                 monster[monsters_count].moving = 0;
@@ -2386,14 +2392,16 @@ void throwweapon(){
     if(player.weapon_in_hand == 1){
         for(int i =0; i< monsters_count; i++){
             if(monster[i].row < player.row + 1 && monster[i].row > player.row - 1
-            && monster[i].col < player.col + 1 && monster[i].col > player.col + 1){
+            && monster[i].col < player.col + 1 && monster[i].col > player.col + 1
+            && monster[i].alive){
                 monster[i].hits += 5;
                 mvprintw(1, 2, "You hit %s", monster[i].name);
                 refresh();
                 getch();
             }
-            if(monster[i].hits >= monster[i].lives){
+            if(monster[i].hits >= monster[i].lives && monster[i].alive){
                 monster[i].moving = 0;
+                monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
                 mvprintw(1, 2, "You killed %s", monster[i].name);
                 refresh();
@@ -2407,7 +2415,7 @@ void throwweapon(){
             int hit  = 0;
             for(int i = player.col + 1; i <= player.col +5; i++){
                 if(!hit){for(int j = 0; j< monsters_count; i++){
-                    if(monster[j].row == player.row && monster[j].col == i){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
                         monster[j].hits += 12;
                         mvprintw(1, 2, "You hit %s", monster[j].name);
                         hit =1; 
@@ -2415,9 +2423,13 @@ void throwweapon(){
                         refresh();
                         getch();
                     }
-                    if(monster[j].hits >= monster[j].lives){
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
                         monster[j].moving = 0;
+                        monster[j].alive = 0;
                         monster[j].moves = monster[j].max_moves;
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        refresh();
+                        getch();
                     }
                     if(game_map[player.row][i] == WALLV){
                         game_map[player.row][i-1] = DAGGER_SHOT;
@@ -2432,7 +2444,7 @@ void throwweapon(){
             for(int i = player.row + 1; i<= player.row +5; i++){
                 if(!hit){
                     for(int j = 0; j < monsters_count; j++){
-                        if(monster[j].row == i && monster[j].col == player.col){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
                             monster[j].hits += 12;
                             mvprintw(1, 2, "You hit %s", monster[j].name);
                             hit = 1;
@@ -2440,20 +2452,83 @@ void throwweapon(){
                             refresh();
                             getch();
                         }
-                        if(monster[j].hits >= monster[j].lives){
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
                             monster[j].moving = 0;
+                            monster[j].alive = 0;
                             monster[j].moves = monster[j].max_moves;
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            refresh();
+                            getch();
                         }
                         if(game_map[i][player.col] == WALLH){
                             player.dagger --;
-                            game_map[i-1][player.col] == DAGGER_SHOT;
+                            game_map[i-1][player.col] = DAGGER_SHOT;
+                            hit =1;
                         }
                     }
                 }
             }
         }
-        if(ch == 'j');
-        if(ch == 'h');
+        if(ch == 'j'){
+            int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH){
+                            player.dagger --;
+                            game_map[i + 1][player.col] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+        }
+        if(ch == 'h'){
+            int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV){
+                            player.dagger --;
+                            game_map[player.row][i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+        }
         if(ch == 'u');
         if(ch == 'y');
         if(ch == 'n');
