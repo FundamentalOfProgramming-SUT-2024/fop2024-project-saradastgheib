@@ -46,7 +46,8 @@ typedef enum {
     NORMAL_ARROW = 28,
     SWORD = 29,
     mFOOD = 30, 
-    rFOOD = 31
+    rFOOD = 31,
+    DAGGER_SHOT = 32
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -120,6 +121,7 @@ HallOfFameEntry entry = {0};
 Room rooms[10];
 int room_index = 0;
 int g = 1;
+int moves ;
 int sword_count = 0;
 void main_menu ();
 void startplaying();
@@ -165,7 +167,9 @@ void place_blackgold(int row, int col, int roomRows, int roomCols);
 void place_weapon(int row, int col, int roomRows, int roomCols);
 void place_monsters(int row, int col, int roomRows, int roomCols);
 void move_monsters();
+void throwweapon();
 int main() {
+    setlocale(LC_ALL, "");
     initscr();
     start_color();
     cbreak();
@@ -824,6 +828,7 @@ void printall() {
 void game_area(){
     int gold = 0;
     current_floor = 0;
+    moves = 0;
     clear();
     mvprintw(1, 2, "This is where messages should appear");
     refresh();
@@ -1047,8 +1052,8 @@ void game_area(){
             keypad(win, TRUE);
             box(win, 0, 0);
             mvwprintw(win, 1, 2, "-LIST OF FOODS-");
-            mvwprintw(win, 3, 2, "hunger : %d", 5-player.health);
-            mvwprintw(win,5, 2, "you have %d normal foods with you.", player.normal_food);
+            mvwprintw(win, 3, 2, "hunger : %d", 10-player.health);
+            mvwprintw(win,5, 2, "you have %d foods with you.", player.normal_food + player.fancy_food + player.magical_food + player.rotten_food);
             mvwprintw(win, 7, 2, "do you want to consume food? (y/n)");
             wrefresh(win);
             ch = getch();
@@ -1069,23 +1074,46 @@ void game_area(){
                             player.normal_food --;
                             not_consumed = 0;
                             if(player.health < 5) player.health ++;
+                            mvwprintw(win, 9, 2, "You consumed a normal food!");
+                            wrefresh(win);
                         }
                         else if(random == 1 && player.fancy_food > 0){
                             player.fancy_food --;
                             not_consumed = 0;
                             if(player.health < 5) player.health ++;
                             player.power = 1;
+                            wattron(win, COLOR_PAIR(2));
+                            mvwprintw(win , 9, 2, "You consumed a fancy food!");
+                            wattroff(win, COLOR_PAIR(2));
+                            wrefresh(win);
                         }
-                        else if(random == 1 && player.magical_food > 0){
+                        else if(random == 2 && player.magical_food > 0){
                             player.magical_food --;
                             not_consumed = 0;
                             if(player.health < 5) player.health ++;
                             player.speed = 1;
+                            wattron(win, COLOR_PAIR(2));
+                            mvwprintw(win, 9, 2, "You consumed a magical food!");
+                            wattroff(win, COLOR_PAIR(2));
+                            wrefresh(win);
                         }
+                        else if(random == 3 && player.rotten_food > 0){
+                            player.rotten_food --;
+                            not_consumed = 0;
+                            player.health  --;
+                            player.speed = 1;
+                            wattron(win, COLOR_PAIR(1));
+                            mvwprintw(win, 9, 2, "You consumed a rotten food!");
+                            wattroff(win, COLOR_PAIR(1));
+                            wrefresh(win);
+                        }
+
                     }
                 }
+                getch();
+                delwin(win);
             }
-            else if(ch == 'n' || ch == 127){
+            else {
                 delwin(win);
             }
             break;
@@ -1160,6 +1188,8 @@ void game_area(){
         case 'g':
         g = 0;
         break;
+        case ' ':
+         throwweapon();
         default:
             break;
         }
@@ -1170,6 +1200,11 @@ void game_area(){
     attroff(COLOR_PAIR(1));
     refresh();
     napms(7000);
+    entry.score = 0;
+    entry.gold_pieces = 0;
+    entry.games_finished = 0;
+    monsters_count = 0;
+    sword_count = 0;
     pre_game_area();
 }
 int load_user_data(HallOfFameEntry *entry){
@@ -1503,12 +1538,12 @@ void removeUnconnectedDoors() {
     }
 }
 void movePlayer(int newRow, int newCol) {
-    if(rand()%100 == 1){
+    if(moves % 75 == 99){
         player.health--;
         player.speed = 0;
         player.power = 0;
     }
-    if(rand()%10 == 7){
+    if(moves % 100 == 74){
         int random = rand() % 3;
         if(random == 0 && player.fancy_food != 0){
             player.fancy_food --;
@@ -1522,6 +1557,8 @@ void movePlayer(int newRow, int newCol) {
             player.normal_food --;
             player.rotten_food ++;
         }
+        player.speed = 0;
+        player.power = 0;
     }
     if (newRow >= 0 && newRow < MAXROW && newCol >= 0 && newCol < MAXCOL &&
         (game_map[newRow][newCol] == FLOOR || game_map[newRow][newCol] == DOOR || game_map[newRow][newCol] == CORRIDOR || game_map[newRow][newCol]==SWALLH || game_map[newRow][newCol] == SWALLV || game_map[newRow][newCol] == SWALLNO || game_map[newRow][newCol] == STAIRCASE)) {
@@ -1546,6 +1583,14 @@ void movePlayer(int newRow, int newCol) {
         player.row = newRow;
         player.col = newCol;
         }
+    }
+    if(game_map[newRow][newCol] == DAGGER_SHOT){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.dagger ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
     }
     if(game_map[newRow][newCol] == DAGGER){
         if(g){
@@ -1866,6 +1911,7 @@ void printMap() {
                 switch (game_map[i][j]) {
                 case WALLV: mvaddch(i, j, '|'); break;
                 case FLOOR: mvaddch(i, j, '.'); break;
+                case DAGGER_SHOT: mvaddch(i, j, ','); break;
                 case DOOR: mvaddch(i, j, '+'); break;
                 case CORRIDOR: mvaddch(i, j, '#'); break;
                 case PILLAR: mvaddch(i, j, 'O'); break;
@@ -2334,5 +2380,83 @@ void move_monsters(){
                 monster[i].moving = 0;
             }
         }
+    }
+}
+void throwweapon(){
+    if(player.weapon_in_hand == 1){
+        for(int i =0; i< monsters_count; i++){
+            if(monster[i].row < player.row + 1 && monster[i].row > player.row - 1
+            && monster[i].col < player.col + 1 && monster[i].col > player.col + 1){
+                monster[i].hits += 5;
+                mvprintw(1, 2, "You hit %s", monster[i].name);
+                refresh();
+                getch();
+            }
+            if(monster[i].hits >= monster[i].lives){
+                monster[i].moving = 0;
+                monster[i].moves = monster[i].max_moves;
+                mvprintw(1, 2, "You killed %s", monster[i].name);
+                refresh();
+                getch();
+            }
+        }
+    }
+    else if(player.weapon_in_hand == 2){
+        int ch = getch();
+        if(ch == 'l'){
+            int hit  = 0;
+            for(int i = player.col + 1; i <= player.col +5; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i){
+                        monster[j].hits += 12;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        player.dagger --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives){
+                        monster[j].moving = 0;
+                        monster[j].moves = monster[j].max_moves;
+                    }
+                    if(game_map[player.row][i] == WALLV){
+                        game_map[player.row][i-1] = DAGGER_SHOT;
+                        hit = 1;
+                        player.dagger --;
+                    }
+                }
+            }}
+        }
+        if(ch == 'k'){
+            int hit = 0;
+            for(int i = player.row + 1; i<= player.row +5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                        }
+                        if(game_map[i][player.col] == WALLH){
+                            player.dagger --;
+                            game_map[i-1][player.col] == DAGGER_SHOT;
+                        }
+                    }
+                }
+            }
+        }
+        if(ch == 'j');
+        if(ch == 'h');
+        if(ch == 'u');
+        if(ch == 'y');
+        if(ch == 'n');
+        if(ch == 'b');
     }
 }
