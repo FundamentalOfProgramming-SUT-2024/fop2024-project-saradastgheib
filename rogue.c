@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <locale.h>
 #include <wchar.h>     
-
 //403105941
 char current_username[50] = "";
 char game_mode[20] = "";
@@ -41,10 +40,13 @@ typedef enum {
     GOLD = 22,
     nFOOD = 23,
     BLACKGOLD = 24,
+    fFOOD = 25,
     DAGGER = 26,
     MAGIC_WAND = 27,
     NORMAL_ARROW = 28,
-    SWORD = 29
+    SWORD = 29,
+    mFOOD = 30, 
+    rFOOD = 31
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -68,12 +70,18 @@ typedef struct {
     int sps;
     int golds;
     int normal_food;
-    int mace;
-    int dagger;
-    int magic_wand;
-    int normal_arrow;
-    int sword;
+    int fancy_food;
+    int magical_food;
+    int rotten_food;
+    int mace; // 1
+    int dagger; // 2
+    int magic_wand; // 3
+    int normal_arrow; // 4
+    int sword; // 5
     int score;
+    int weapon_in_hand;
+    int power;
+    int speed;
 } Player;
 Player player;
 typedef struct {
@@ -112,6 +120,7 @@ HallOfFameEntry entry = {0};
 Room rooms[10];
 int room_index = 0;
 int g = 1;
+int sword_count = 0;
 void main_menu ();
 void startplaying();
 void registeruser();
@@ -819,7 +828,7 @@ void game_area(){
     mvprintw(1, 2, "This is where messages should appear");
     refresh();
     curs_set(0);
-    player.health = 5;
+    player.health = 10;
     player.ancientkeys = 0;
     player.brokenkeys = 0;
     player.mace = 1;
@@ -830,6 +839,9 @@ void game_area(){
     player.sword = 0;
     player.golds =0;
     player.score = 0;
+    player.weapon_in_hand = 1;
+    player.speed = 0; 
+    player.power = 0;
     strcpy(entry.username, current_username);
     current_floor = 0;
     if(!load_user_data(&entry)){
@@ -888,27 +900,146 @@ void game_area(){
             }
             break;
         case 'q':
+            monsters_count = 0;
             return;
         case 'm':
             printall();
             break;
         case 'i':
-            WINDOW *winn = newwin(13, 50, 5, 10);
+            WINDOW *winn = newwin(20, 60, 5, 10);
             keypad(winn, TRUE);
             box(winn, 0, 0);
             mvwprintw(winn, 1, 2, "-LIST OF WEAPONS-");
-            if(player.mace != 0)mvwprintw(winn, 3, 2, "You have %d mace(s)", player.mace);
+            attron(COLOR_PAIR(2));
+            if(player.weapon_in_hand == 1) mvwprintw(winn, 1, 2, "You have a mace in your hand!");
+            else if(player.weapon_in_hand == 2) mvwprintw (winn, 1, 2, "You have daggers in your hand!");
+            else if(player.weapon_in_hand == 3) mvwprintw(winn, 1, 2, "You have magic wands in your hand!");
+            else if(player.weapon_in_hand == 4) mvwprintw(winn, 1, 2, "You have normal arrows in your hand!");
+            else if(player.weapon_in_hand == 5) mvwprintw(winn, 1, 2, "You have a sword in your hand!");
+            attroff(COLOR_PAIR(2));
+            if(player.mace != 0)mvwprintw(winn, 3, 2, "(m)%d mace(s)  damage: 5  ", player.mace);
             if(player.mace == 0)mvwprintw(winn, 3, 2, "You don't have any maces");
-            if(player.dagger != 0) mvwprintw(winn, 5, 2, "You have %d dagger(s)", player.dagger);
+            if(player.dagger != 0) mvwprintw(winn, 5, 2, "(d)%d dagger(s)", player.dagger);
             if(player.dagger == 0) mvwprintw(winn, 5, 2, "You don't have any daggers");
-            if(player.magic_wand != 0) mvwprintw(winn, 7, 2, "You have %d magic wand(s)", player.magic_wand);
+            if(player.magic_wand != 0) mvwprintw(winn, 7, 2, "(g)%d magic wand(s)", player.magic_wand);
             if(player.magic_wand == 0) mvwprintw(winn, 7, 2, "You don't have any magic wands");
-            if(player.normal_arrow != 0) mvwprintw(winn, 9, 2, "You have %d normal arrow(s)", player.normal_arrow);
+            if(player.normal_arrow != 0) mvwprintw(winn, 9, 2, "(n)%d normal arrow(s)", player.normal_arrow);
             if(player.normal_arrow == 0) mvwprintw(winn, 9, 2, "You don't have any normal arrows");
-            if(player.sword != 0) mvwprintw(winn, 11, 2, "You have %d sword(s)", player.sword);
+            if(player.sword != 0) mvwprintw(winn, 11, 2, "(s)%d sword(s)", player.sword);
             if(player.sword == 0) mvwprintw(winn, 11, 2, "You don't have any swords");
             wrefresh(winn);
-            getch();
+            while(1){
+                ch = getch();
+                if( ch == 'w'){
+                    mvwprintw(winn, 13, 2, "                                                     ");
+                    if(player.weapon_in_hand == 1) mvwprintw(winn, 13, 2, "You put your mace in your backpack!");
+                    else if(player.weapon_in_hand == 2) mvwprintw (winn, 13, 2, "You put your daggers in your backpack!");
+                    else if(player.weapon_in_hand == 3) mvwprintw(winn, 13, 2, "You put your magic_wands in your backpack!");
+                    else if(player.weapon_in_hand == 4) mvwprintw(winn, 13, 2, "You put your normal arrows in your backpack!");
+                    else if(player.weapon_in_hand == 5) mvwprintw(winn, 13, 2, "You put your sword in your backpack!");
+                    else mvwprintw(winn, 13, 2, "You have nothing in your hand");
+                    player.weapon_in_hand = 0;
+                }
+                else if(ch == 'm'){
+                    if(player.weapon_in_hand == 0){
+                        mvwprintw(winn, 13, 2, "                                                       ");
+                        attron(COLOR_PAIR(2));
+                        mvwprintw(winn, 13, 2, "You now have a mace in your hand!");
+                        attroff(COLOR_PAIR(2));
+                        player.weapon_in_hand = 1;
+                        wrefresh(winn);
+                        getch();
+                        break;
+                    }
+                    else{
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(1)); 
+                        mvwprintw(winn, 13, 2, "You must put your current item in your backpack first!");
+                        attroff(COLOR_PAIR(1));
+                    }
+                }
+                else if(ch == 'd'){
+                    if(player.weapon_in_hand == 0){
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(2));
+                        mvwprintw(winn, 13, 2, "You now have daggers in your hand!");
+                        attroff(COLOR_PAIR(2));
+                        player.weapon_in_hand = 2;
+                        wrefresh(winn);
+                        getch();
+                        break;
+                    }
+                    else{
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(1));
+                        mvwprintw(winn, 13, 2, "You must put your current item in your backpack first!");
+                        attroff(COLOR_PAIR(1));
+                    }
+                }
+                else if(ch == 'g'){
+                    if(player.weapon_in_hand == 0){
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(2));
+                        mvwprintw(winn, 13, 2, "You now have magic wands in your hand!");
+                        attroff(COLOR_PAIR(2));
+                        player.weapon_in_hand = 3;
+                        wrefresh(winn);
+                        getch();
+                        break;
+                    }
+                    else{
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(1));
+                        mvwprintw(winn, 13, 2, "You must put your current item in your backpack first!");
+                        attroff(COLOR_PAIR(1));
+                    }
+                }
+                else if(ch == 'n'){
+                    if(player.weapon_in_hand == 0){
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(2));
+                        mvwprintw(winn, 13, 2, "You now have normal arrows in your hand!");
+                        attroff(COLOR_PAIR(2));
+                        player.weapon_in_hand = 4;
+                        wrefresh(winn);
+                        getch();
+                        break;
+                    }
+                    else{
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(1));
+                        mvwprintw(winn, 13, 2, "You must put your current item in your backpack first!");
+                        attroff(COLOR_PAIR(1));
+                    }
+                }
+                else if(ch == 's'){
+                    if(player.weapon_in_hand == 0){
+                        mvwprintw(winn, 13, 2, "                                                      ");
+                        attron(COLOR_PAIR(2));
+                        mvwprintw(winn, 13, 2, "You now have swords in your hand!");
+                        attroff(COLOR_PAIR(2));
+                        player.weapon_in_hand = 5;
+                        wrefresh(winn);
+                        getch();
+                        break;
+                    }
+                    else{
+                        mvwprintw(winn, 13, 2, "                                            ");
+                        attron(COLOR_PAIR(1));
+                        mvwprintw(winn, 13, 2, "You must put your current item in your backpack first!");
+                        attroff(COLOR_PAIR(1));
+                    }
+                }
+                else if(ch == 'q') break;
+                else {
+                    attron(COLOR_PAIR(1));
+                    mvwprintw(winn, 13, 2, "                                                          ");
+                    mvwprintw(winn, 13, 2, "You don't have any of these.");
+                    attroff(COLOR_PAIR(1));
+                }
+                wrefresh(winn);
+            }
+            wrefresh(winn);
             delwin(winn);
             break;
         case 'e':
@@ -922,7 +1053,7 @@ void game_area(){
             wrefresh(win);
             ch = getch();
             if(ch == 'y') {
-                if(player.normal_food == 0){
+                if(player.normal_food + player.fancy_food + player.magical_food +player.rotten_food == 0){
                     wattron(win, COLOR_PAIR(1));
                     mvwprintw(win, 9, 2, "You don't have any food with you");
                     wattroff(win, COLOR_PAIR(1));
@@ -930,23 +1061,28 @@ void game_area(){
                     getch();
                     delwin(win);
                 }
-                else if(player.health < 5){
-                    wattron(win, COLOR_PAIR(2));
-                    mvwprintw(win, 9, 2, "food consumed successfully!");
-                    wattroff(win, COLOR_PAIR(2));
-                    player.normal_food --;
-                    player.health ++;
-                    wrefresh(win);
-                    getch();
-                    delwin(win);
-                }
                 else{
-                    wattron(win, COLOR_PAIR(1));
-                    mvwprintw(win, 9, 2, "You are not hungry right now!");
-                    wattroff(win, COLOR_PAIR(1));
-                    wrefresh(win);
-                    getch();
-                    delwin(win);
+                    int not_consumed  = 1;
+                    while(not_consumed){
+                        int random = rand() % 4;
+                        if(random == 0 && player.normal_food > 0){
+                            player.normal_food --;
+                            not_consumed = 0;
+                            if(player.health < 5) player.health ++;
+                        }
+                        else if(random == 1 && player.fancy_food > 0){
+                            player.fancy_food --;
+                            not_consumed = 0;
+                            if(player.health < 5) player.health ++;
+                            player.power = 1;
+                        }
+                        else if(random == 1 && player.magical_food > 0){
+                            player.magical_food --;
+                            not_consumed = 0;
+                            if(player.health < 5) player.health ++;
+                            player.speed = 1;
+                        }
+                    }
                 }
             }
             else if(ch == 'n' || ch == 127){
@@ -1020,6 +1156,7 @@ void game_area(){
                 }
             }
             break;
+        
         case 'g':
         g = 0;
         break;
@@ -1368,6 +1505,23 @@ void removeUnconnectedDoors() {
 void movePlayer(int newRow, int newCol) {
     if(rand()%100 == 1){
         player.health--;
+        player.speed = 0;
+        player.power = 0;
+    }
+    if(rand()%10 == 7){
+        int random = rand() % 3;
+        if(random == 0 && player.fancy_food != 0){
+            player.fancy_food --;
+            player.normal_food ++;
+        }
+        else if(random == 1 && player.magical_food != 0){
+            player.magical_food --;
+            player.normal_food ++;
+        }
+        else if(random == 2 && player.normal_food != 0){
+            player.normal_food --;
+            player.rotten_food ++;
+        }
     }
     if (newRow >= 0 && newRow < MAXROW && newCol >= 0 && newCol < MAXCOL &&
         (game_map[newRow][newCol] == FLOOR || game_map[newRow][newCol] == DOOR || game_map[newRow][newCol] == CORRIDOR || game_map[newRow][newCol]==SWALLH || game_map[newRow][newCol] == SWALLV || game_map[newRow][newCol] == SWALLNO || game_map[newRow][newCol] == STAIRCASE)) {
@@ -1432,9 +1586,33 @@ void movePlayer(int newRow, int newCol) {
     napms(10000);
 }
     if(game_map[newRow][newCol] == nFOOD){
-        if(g && player.normal_food <5){
+        if(g && (player.normal_food + player.fancy_food + player.magical_food + player.rotten_food )< 10){
             game_map[newRow][newCol] = FLOOR;
             player.normal_food ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == fFOOD){
+        if(g && (player.normal_food + player.fancy_food + player.magical_food + player.rotten_food )< 10){
+            game_map[newRow][newCol] = FLOOR;
+            player.fancy_food ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == mFOOD){
+        if(g && (player.normal_food + player.fancy_food + player.magical_food + player.rotten_food )< 10){
+            game_map[newRow][newCol] = FLOOR;
+            player.magical_food ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == rFOOD){
+        if(g && (player.normal_food + player.fancy_food + player.magical_food + player.rotten_food )< 10){
+            game_map[newRow][newCol] = FLOOR;
+            player.rotten_food ++;
         }
         player.row = newRow;
         player.col = newCol;
@@ -1673,6 +1851,7 @@ if(game_map[newRow][newCol] == END){
     entry.gold_pieces = 0;
     entry.games_finished = 0;
     monsters_count = 0;
+    sword_count = 0;
     main_menu();
 }
 g = 1;
@@ -1966,8 +2145,11 @@ void placefood(int row, int col, int roomRows, int roomCols){
     while(count --){
         int rown = (rand() %(roomRows - 2)) + row + 1;
         int coln = (rand() % (roomCols - 2)) + col + 1;
-        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = nFOOD;
-    }
+        int random = rand() % 4;
+        if(game_map[rown][coln] == FLOOR && random == 0) game_map[rown][coln] = nFOOD;
+        else if(game_map[rown][coln] == FLOOR && random == 1) game_map[rown][coln] = fFOOD;
+        else if(game_map[rown][coln] == FLOOR && random == 2) game_map[rown][coln] = mFOOD;
+        else if(game_map[rown][coln] == FLOOR && random == 3) game_map[rown][coln] = rFOOD;    }
 }
 void place_weapon(int row, int col, int roomRows, int roomCols){
     int count = rand() % 4;
@@ -1979,7 +2161,10 @@ void place_weapon(int row, int col, int roomRows, int roomCols){
             if(random == 2) game_map[rown][coln] = DAGGER;
             if(random == 3) game_map[rown][coln] = MAGIC_WAND;
             if(random == 4) game_map[rown][coln] = NORMAL_ARROW;
-            if(random == 5) game_map[rown][coln] = SWORD;
+            if(random == 5 && sword_count == 0){
+                game_map[rown][coln] = SWORD;
+                sword_count = 1;
+            }
         }
     }
 }
@@ -2092,6 +2277,7 @@ void move_monsters(){
                             attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
+                            player.health --;
                             getch();
                         }
                         monster[i].moves ++;
@@ -2122,6 +2308,7 @@ void move_monsters(){
                             attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
+                            player.health --;
                             getch();
                         }
                         monster[i].moves ++;
@@ -2136,6 +2323,7 @@ void move_monsters(){
                             attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
+                            player.health --; 
                             getch();
                         }
                         monster[i].moves ++;
