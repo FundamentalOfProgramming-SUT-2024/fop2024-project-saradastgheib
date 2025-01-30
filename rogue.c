@@ -47,7 +47,9 @@ typedef enum {
     SWORD = 29,
     mFOOD = 30, 
     rFOOD = 31,
-    DAGGER_SHOT = 32
+    DAGGER_SHOT = 32,
+    magic_wand_SHOT = 33,
+    normal_arrow_SHOT = 34
 } map_elements;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
@@ -124,6 +126,7 @@ int room_index = 0;
 int g = 1;
 int moves ;
 int sword_count = 0;
+int last_shot = 0;
 void main_menu ();
 void startplaying();
 void registeruser();
@@ -169,6 +172,7 @@ void place_weapon(int row, int col, int roomRows, int roomCols);
 void place_monsters(int row, int col, int roomRows, int roomCols);
 void move_monsters();
 void throwweapon();
+void lastshot(int last_shot);
 int main() {
     setlocale(LC_ALL, "");
     initscr();
@@ -720,7 +724,7 @@ void displayhalloffame(){
             }
             if(i==0){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "1.legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "\U0001F947 legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
@@ -730,7 +734,7 @@ void displayhalloffame(){
             }
             else if(i==1){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "2.legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "\U0001F948 legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
@@ -740,7 +744,7 @@ void displayhalloffame(){
             }
             else if(i==2){
                 wattron(stdscr, COLOR_PAIR(3) | A_BOLD);
-                mvprintw(row, 2, "3.legend %s - %d - %d gold - %d games - %ld days",
+                mvprintw(row, 2, "\U0001F949 legend %s - %d - %d gold - %d games - %ld days",
                          entries[i].username,
                          entries[i].score,
                          entries[i].gold_pieces,
@@ -830,6 +834,7 @@ void game_area(){
     int gold = 0;
     current_floor = 0;
     moves = 0;
+    last_shot = 0;
     clear();
     mvprintw(1, 2, "This is where messages should appear");
     refresh();
@@ -858,15 +863,26 @@ void game_area(){
     while(player.health > 0){
         printMap();
         mvprintw(35, 10, "Health: %d", player.health);
-        mvprintw(35, 40, "ancient keys: %d", player.ancientkeys);
-        mvprintw(35, 70, "broken keys: %d", player.brokenkeys);
+        mvprintw(35, 40, "player col: %d", player.col);
+        mvprintw(35, 70, "player row: %d", player.row);
         mvprintw(35, 100, "Total score: %d", player.score);
         mvprintw(35, 130, "Gold: %d", player.golds);
+        
         refresh();
 
         int ch = getch();
         switch (ch)
         {
+        case 'o':
+            WINDOW *winc = newwin(20, 60, 5, 10);
+            keypad(winc, TRUE);
+            box(winc, 0, 0);
+            for(int i =0; i< monsters_count; i++){
+                mvwprintw(winc, 2 + i, 12, "%d)%s %d %d", i, monster[i].name, monster[i].row, monster[i].col);
+            }
+            wrefresh(winc);
+            getch();
+            delwin(winc);
         case 'y':
             movePlayer(player.row -1, player.col -1);
             move_monsters();
@@ -916,13 +932,13 @@ void game_area(){
             keypad(winn, TRUE);
             box(winn, 0, 0);
             mvwprintw(winn, 1, 2, "-LIST OF WEAPONS-");
-            attron(COLOR_PAIR(2));
+            wattron(winn, COLOR_PAIR(2));
             if(player.weapon_in_hand == 1) mvwprintw(winn, 1, 2, "You have a mace in your hand!");
             else if(player.weapon_in_hand == 2) mvwprintw (winn, 1, 2, "You have daggers in your hand!");
             else if(player.weapon_in_hand == 3) mvwprintw(winn, 1, 2, "You have magic wands in your hand!");
             else if(player.weapon_in_hand == 4) mvwprintw(winn, 1, 2, "You have normal arrows in your hand!");
             else if(player.weapon_in_hand == 5) mvwprintw(winn, 1, 2, "You have a sword in your hand!");
-            attroff(COLOR_PAIR(2));
+            wattroff(winn, COLOR_PAIR(2));
             if(player.mace != 0)mvwprintw(winn, 3, 2, "(m)%d mace(s)  damage: 5  ", player.mace);
             if(player.mace == 0)mvwprintw(winn, 3, 2, "You don't have any maces");
             if(player.dagger != 0) mvwprintw(winn, 5, 2, "(d)%d dagger(s)", player.dagger);
@@ -1047,6 +1063,9 @@ void game_area(){
             }
             wrefresh(winn);
             delwin(winn);
+            break;
+        case 'a':
+            lastshot(last_shot);
             break;
         case 'e':
             WINDOW *win = newwin(14, 50, 5, 10);
@@ -1609,10 +1628,26 @@ void movePlayer(int newRow, int newCol) {
         player.row = newRow;
         player.col = newCol;
     }
+    if(game_map[newRow][newCol] == magic_wand_SHOT){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.magic_wand ++;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
     if(game_map[newRow][newCol] == NORMAL_ARROW){
         if(g){
             game_map[newRow][newCol] = FLOOR;
             player.normal_arrow += 20;
+        }
+        player.row = newRow;
+        player.col = newCol;
+    }
+    if(game_map[newRow][newCol] == normal_arrow_SHOT){
+        if(g){
+            game_map[newRow][newCol] = FLOOR;
+            player.normal_arrow ++;
         }
         player.row = newRow;
         player.col = newCol;
@@ -1913,6 +1948,8 @@ void printMap() {
                 case WALLV: mvaddch(i, j, '|'); break;
                 case FLOOR: mvaddch(i, j, '.'); break;
                 case DAGGER_SHOT: mvaddch(i, j, ','); break;
+                case magic_wand_SHOT: mvaddch(i, j, ','); break;
+                case normal_arrow_SHOT: mvaddch(i, j, ','); break;
                 case DOOR: mvaddch(i, j, '+'); break;
                 case CORRIDOR: mvaddch(i, j, '#'); break;
                 case PILLAR: mvaddch(i, j, 'O'); break;
@@ -2391,8 +2428,8 @@ void move_monsters(){
 void throwweapon(){
     if(player.weapon_in_hand == 1){
         for(int i =0; i< monsters_count; i++){
-            if(monster[i].row < player.row + 1 && monster[i].row > player.row - 1
-            && monster[i].col < player.col + 1 && monster[i].col > player.col + 1
+            if(monster[i].row <= player.row + 1 && monster[i].row >= player.row - 1
+            && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
             && monster[i].alive){
                 monster[i].hits += 5;
                 mvprintw(1, 2, "You hit %s", monster[i].name);
@@ -2403,13 +2440,16 @@ void throwweapon(){
                 monster[i].moving = 0;
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
+                attron(COLOR_PAIR(2));
                 mvprintw(1, 2, "You killed %s", monster[i].name);
+                attroff(COLOR_PAIR(2));
                 refresh();
                 getch();
             }
         }
+        last_shot = 1;
     }
-    else if(player.weapon_in_hand == 2){
+    else if(player.weapon_in_hand == 2 && player.dagger > 0){
         int ch = getch();
         if(ch == 'l'){
             int hit  = 0;
@@ -2427,17 +2467,20 @@ void throwweapon(){
                         monster[j].moving = 0;
                         monster[j].alive = 0;
                         monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
                         mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
                         refresh();
                         getch();
                     }
-                    if(game_map[player.row][i] == WALLV){
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
                         game_map[player.row][i-1] = DAGGER_SHOT;
                         hit = 1;
                         player.dagger --;
                     }
                 }
             }}
+            last_shot = 21;
         }
         if(ch == 'k'){
             int hit = 0;
@@ -2456,11 +2499,13 @@ void throwweapon(){
                             monster[j].moving = 0;
                             monster[j].alive = 0;
                             monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
                             mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
                             refresh();
                             getch();
                         }
-                        if(game_map[i][player.col] == WALLH){
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
                             player.dagger --;
                             game_map[i-1][player.col] = DAGGER_SHOT;
                             hit =1;
@@ -2468,6 +2513,7 @@ void throwweapon(){
                     }
                 }
             }
+            last_shot = 22;
         }
         if(ch == 'j'){
             int hit = 0;
@@ -2485,12 +2531,14 @@ void throwweapon(){
                         if(monster[j].hits >= monster[j].lives && monster[j].alive){
                             monster[j].moving = 0;
                             monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
                             mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
                             monster[j].alive = 0;
                             refresh();
                             getch();
                         }
-                        if(game_map[i][player.col] == WALLH){
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
                             player.dagger --;
                             game_map[i + 1][player.col] = DAGGER_SHOT;
                             hit = 1;
@@ -2498,6 +2546,7 @@ void throwweapon(){
                     }
                 }
             }
+            last_shot = 23;
         }
         if(ch == 'h'){
             int hit = 0;
@@ -2516,11 +2565,13 @@ void throwweapon(){
                             monster[j].moving = 0;
                             monster[j].moves = monster[j].max_moves;
                             monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
                             mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
                             refresh();
                             getch();
                         }
-                        if(game_map[player.row][i] == WALLV){
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
                             player.dagger --;
                             game_map[player.row][i + 1] = DAGGER_SHOT;
                             hit = 1;
@@ -2528,10 +2579,1595 @@ void throwweapon(){
                     }
                 }
             }
+            last_shot = 24;
         }
-        if(ch == 'u');
-        if(ch == 'y');
-        if(ch == 'n');
-        if(ch == 'b');
+        if(ch == 'u'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row - i  + 1][player.col + i -1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 25;
+        }
+        if(ch == 'y'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 26;
+        }
+        if(ch == 'n'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 27;
+        }
+        if(ch == 'b'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 28;
+        }
+    }
+    else if(player.weapon_in_hand == 2 && player.dagger <= 0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough daggers.");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    else if(player.weapon_in_hand == 3 && player.magic_wand > 0){
+        int ch = getch();
+        if(ch == 'l'){
+            int hit  = 0;
+            for(int i = player.col + 1; i <= player.col + 10; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                        monster[j].hits += 15;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        monster[j].moving = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        player.magic_wand --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                        monster[j].moving = 0;
+                        monster[j].alive = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
+                        refresh();
+                        getch();
+                    }
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                        game_map[player.row][i-1] = magic_wand_SHOT;
+                        hit = 1;
+                        player.magic_wand --;
+                    }
+                }
+            }}
+            last_shot = 31;
+        }
+        if(ch == 'k'){
+            int hit = 0;
+            for(int i = player.row + 1; i<= player.row + 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].alive = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.magic_wand --;
+                            game_map[i-1][player.col] = magic_wand_SHOT;
+                            hit =1;
+                        }
+                    }
+                }
+            }
+            last_shot = 32;
+        }
+        if(ch == 'j'){
+            int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 10; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.magic_wand --;
+                            game_map[i + 1][player.col] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 33;
+        }
+        if(ch == 'h'){
+            int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 10; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                            player.magic_wand --;
+                            game_map[player.row][i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 34;
+        }
+        if(ch == 'u'){
+            int hit = 0;
+            for(int i = 1; i<= 10 ; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row - i  + 1][player.col + i -1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 35;
+        }
+        if(ch == 'y'){
+            int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 36;
+        }
+        if(ch == 'n'){
+            int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 37;
+        }
+        if(ch == 'b'){
+            int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            hit = 1;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 38;
+        }
+    } 
+    else if(player.weapon_in_hand == 3 && player.magic_wand <= 0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough magic wands!");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    else if(player.weapon_in_hand == 4 && player.normal_arrow > 0){
+        int ch = getch();
+        if(ch == 'l'){
+            int hit  = 0;
+            for(int i = player.col + 1; i <= player.col +5; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                        monster[j].hits += 5;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        player.normal_arrow --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                        monster[j].moving = 0;
+                        monster[j].alive = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
+                        refresh();
+                        getch();
+                    }
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                        game_map[player.row][i-1] = normal_arrow_SHOT;
+                        hit = 1;
+                        player.normal_arrow --;
+                    }
+                }
+            }}
+            last_shot = 41;
+        }
+        if(ch == 'k'){
+            int hit = 0;
+            for(int i = player.row + 1; i<= player.row +5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].alive = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.normal_arrow --;
+                            game_map[i-1][player.col] = normal_arrow_SHOT;
+                            hit =1;
+                        }
+                    }
+                }
+            }
+            last_shot = 42;
+        }
+        if(ch == 'j'){
+            int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.normal_arrow --;
+                            game_map[i + 1][player.col] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 43;
+        }
+        if(ch == 'h'){
+            int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                            player.normal_arrow --;
+                            game_map[player.row][i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 44;
+        }
+        if(ch == 'u'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row - i  + 1][player.col + i -1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 45;
+        }
+        if(ch == 'y'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+            last_shot = 46;
+        }
+        if(ch == 'n'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+        }
+        if(ch == 'b'){
+            int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    else if(player.weapon_in_hand == 4 && player.normal_arrow <= 0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough normal arrows!");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    if(player.weapon_in_hand == 5){
+        for(int i =0; i< monsters_count; i++){
+            if(monster[i].row <= player.row + 1 && monster[i].row >= player.row - 1
+            && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
+            && monster[i].alive){
+                monster[i].hits += 10;
+                mvprintw(1, 2, "You hit %s", monster[i].name);
+                refresh();
+                getch();
+            }
+            if(monster[i].hits >= monster[i].lives && monster[i].alive){
+                monster[i].moving = 0;
+                monster[i].alive = 0;
+                monster[i].moves = monster[i].max_moves;
+                attron(COLOR_PAIR(2));
+                mvprintw(1, 2, "You killed %s", monster[i].name);
+                attroff(COLOR_PAIR(2));
+                refresh();
+                getch();
+            }
+        }
+    }
+}
+void lastshot(int last_shot){
+    if(last_shot == 1){
+        for(int i =0; i< monsters_count; i++){
+            if(monster[i].row <= player.row + 1 && monster[i].row >= player.row - 1
+            && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
+            && monster[i].alive){
+                monster[i].hits += 5;
+                mvprintw(1, 2, "You hit %s", monster[i].name);
+                refresh();
+                getch();
+            }
+            if(monster[i].hits >= monster[i].lives && monster[i].alive){
+                monster[i].moving = 0;
+                monster[i].alive = 0;
+                monster[i].moves = monster[i].max_moves;
+                attron(COLOR_PAIR(2));
+                mvprintw(1, 2, "You killed %s", monster[i].name);
+                attroff(COLOR_PAIR(2));
+                refresh();
+                getch();
+            }
+        }
+    }
+    else if(last_shot == 21 && player.dagger > 0){
+        int hit  = 0;
+            for(int i = player.col + 1; i <= player.col +5; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                        monster[j].hits += 12;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        player.dagger --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                        monster[j].moving = 0;
+                        monster[j].alive = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
+                        refresh();
+                        getch();
+                    }
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                        game_map[player.row][i-1] = DAGGER_SHOT;
+                        hit = 1;
+                        player.dagger --;
+                    }
+                }
+            }}
+    }
+    else if(last_shot == 22 && player.dagger > 0){
+        int hit = 0;
+            for(int i = player.row + 1; i<= player.row +5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].alive = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.dagger --;
+                            game_map[i-1][player.col] = DAGGER_SHOT;
+                            hit =1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 23 && player.dagger > 0){
+        int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.dagger --;
+                            game_map[i + 1][player.col] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 24 && player.dagger > 0){
+        int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                            player.dagger --;
+                            game_map[player.row][i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 25 && player.dagger > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row - i  + 1][player.col + i -1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 26 && player.dagger > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 27 && player.dagger > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 28 && player.dagger > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 12;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.dagger --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.dagger --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = DAGGER_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot >= 21 && last_shot <=28 && player.dagger <=0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough daggers.");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    else if(last_shot == 31 && player.magic_wand > 0){
+        int hit  = 0;
+            for(int i = player.col + 1; i <= player.col + 10; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                        monster[j].hits += 15;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        monster[j].moving = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        player.magic_wand --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                        monster[j].moving = 0;
+                        monster[j].alive = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
+                        refresh();
+                        getch();
+                    }
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                        game_map[player.row][i-1] = magic_wand_SHOT;
+                        hit = 1;
+                        player.magic_wand --;
+                    }
+                }
+            }}
+    }
+    else if(last_shot == 32 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = player.row + 1; i<= player.row + 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].alive = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.magic_wand --;
+                            game_map[i-1][player.col] = magic_wand_SHOT;
+                            hit =1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 33 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 10; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.magic_wand --;
+                            game_map[i + 1][player.col] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 34 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 10; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                            player.magic_wand --;
+                            game_map[player.row][i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 35 && player.magic_wand > 0){
+         int hit = 0;
+            for(int i = 1; i<= 10 ; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row - i  + 1][player.col + i -1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 36 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 37 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 38 && player.magic_wand > 0){
+        int hit = 0;
+            for(int i = 1; i<= 10; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 15;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            hit = 1;
+                            player.magic_wand --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.magic_wand --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = magic_wand_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot >= 31 && last_shot <= 28 && player.magic_wand > 0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough magic wands!");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    else if(last_shot == 41 && player.normal_arrow > 0){
+        int hit  = 0;
+            for(int i = player.col + 1; i <= player.col +5; i++){
+                if(!hit){for(int j = 0; j< monsters_count; i++){
+                    if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                        monster[j].hits += 5;
+                        mvprintw(1, 2, "You hit %s", monster[j].name);
+                        hit =1; 
+                        player.normal_arrow --;
+                        refresh();
+                        getch();
+                    }
+                    if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                        monster[j].moving = 0;
+                        monster[j].alive = 0;
+                        monster[j].moves = monster[j].max_moves;
+                        attron(COLOR_PAIR(2));
+                        mvprintw(1, 2, "You killed %s", monster[j].name);
+                        attroff(COLOR_PAIR(2));
+                        refresh();
+                        getch();
+                    }
+                    if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                        game_map[player.row][i-1] = normal_arrow_SHOT;
+                        hit = 1;
+                        player.normal_arrow --;
+                    }
+                }
+            }}
+    }
+    else if(last_shot == 42 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = player.row + 1; i<= player.row +5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].alive = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.normal_arrow --;
+                            game_map[i-1][player.col] = normal_arrow_SHOT;
+                            hit =1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 43 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = player.row - 1; i<= player.row - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1,2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            monster[j].alive = 0;
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
+                            player.normal_arrow --;
+                            game_map[i + 1][player.col] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 44 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = player.col - 1; i<= player.col - 5; i--){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row && monster[j].col == i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV){
+                            player.normal_arrow --;
+                            game_map[player.row][i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 45 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col + i] == WALLV || game_map[player.row - i][player.col + i] == WALLH || game_map[player.row - i][player.col + i] == WALLNO
+                        || game_map[player.row - i][player.col + i] == SWALLV ||game_map[player.row - i][player.col + i] == SWALLH || game_map[player.row - i][player.col + i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row - i  + 1][player.col + i -1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 46 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row - i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row - i][player.col - i] == WALLV || game_map[player.row - i][player.col - i] == WALLH || game_map[player.row - i][player.col - i] == WALLNO
+                        || game_map[player.row - i][player.col - i] == SWALLV ||game_map[player.row - i][player.col - i] == SWALLH || game_map[player.row - i][player.col - i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row - i  + 1][player.col - i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 47 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col + i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col + i] == WALLV || game_map[player.row + i][player.col + i] == WALLH || game_map[player.row + i][player.col + i] == WALLNO
+                        || game_map[player.row + i][player.col + i] == SWALLV ||game_map[player.row + i][player.col + i] == SWALLH || game_map[player.row + i][player.col + i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row + i  - 1][player.col + i - 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot == 48 && player.normal_arrow > 0){
+        int hit = 0;
+            for(int i = 1; i<= 5; i++){
+                if(!hit){
+                    for(int j = 0; j < monsters_count; j++){
+                        if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
+                            monster[j].hits += 5;
+                            mvprintw(1, 2, "You hit %s", monster[j].name);
+                            hit = 1;
+                            player.normal_arrow --;
+                            refresh();
+                            getch();
+                        }
+                        if(monster[j].hits >= monster[j].lives && monster[j]. alive){
+                            monster[j].moving = 0;
+                            monster[j].moves = monster[j].max_moves;
+                            monster[j].alive = 0;
+                            attron(COLOR_PAIR(2));
+                            mvprintw(1, 2, "You killed %s", monster[j].name);
+                            attroff(COLOR_PAIR(2));
+                            refresh();
+                            getch();
+                        }
+                        if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
+                        || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
+                            player.normal_arrow --;
+                            game_map[player.row + i  - 1][player.col - i + 1] = normal_arrow_SHOT;
+                            hit = 1;
+                        }
+                    }
+                }
+            }
+    }
+    else if(last_shot >= 41 && last_shot <= 48 && player.normal_arrow <= 0){
+        attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "You don't have enough normal arrows!");
+        attroff(COLOR_PAIR(1));
+        refresh();
+        getch();
+    }
+    if(last_shot == 5){
+        for(int i =0; i< monsters_count; i++){
+            if(monster[i].row <= player.row + 1 && monster[i].row >= player.row - 1
+            && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
+            && monster[i].alive){
+                monster[i].hits += 5;
+                mvprintw(1, 2, "You hit %s", monster[i].name);
+                refresh();
+                getch();
+            }
+            if(monster[i].hits >= monster[i].lives && monster[i].alive){
+                monster[i].moving = 0;
+                monster[i].alive = 0;
+                monster[i].moves = monster[i].max_moves;
+                attron(COLOR_PAIR(2));
+                mvprintw(1, 2, "You killed %s", monster[i].name);
+                attroff(COLOR_PAIR(2));
+                refresh();
+                getch();
+            }
+        }
     }
 }
