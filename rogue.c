@@ -194,6 +194,18 @@ int main() {
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_BLACK, COLOR_WHITE);
     init_pair(8, COLOR_MAGENTA, COLOR_WHITE);
+    // printf("══════════════════════════════════════\n");
+    // printf("      🗡️  WELCOME TO THE DUNGEON  💀    \n");
+    // printf("══════════════════════════════════════\n");
+    // printf("      ⚔️  [S] Start Playing    \n");
+    // printf("      👤  [P] Profile          \n");
+    // printf("      📜  [H] Hall of Fame     \n");
+    // printf("      🚪  [E] Exit             \n");
+    // printf("══════════════════════════════════════\n");
+    // printf("       Beware the dangers ahead...    \n");
+    printf("══════════════════════════════════════\n");
+
+
     main_menu();
     endwin();
     return 0;
@@ -841,7 +853,6 @@ void game_area(){
     moves = 0;
     last_shot = 0;
     clear();
-    mvprintw(1, 2, "This is where messages should appear");
     refresh();
     curs_set(0);
     if(strcmp(game_mode, "Legendary") == 0) max_health = 5;
@@ -879,9 +890,7 @@ void game_area(){
         mvprintw(35, 70, "Broken keys: %d", player.brokenkeys);
         mvprintw(35, 100, "Total score: %d", player.score);
         mvprintw(35, 130, "Gold: %d", player.golds);
-        
         refresh();
-
         int ch = getch();
         switch (ch)
         {
@@ -1295,10 +1304,11 @@ void game_area(){
     }
     clear();
     attron(COLOR_PAIR(1));
-    mvprintw(17, 65, "You lost :( Try again?");
+    print_message(3);
     attroff(COLOR_PAIR(1));
     refresh();
-    napms(7000);
+    napms(5000);
+    getch();
     entry.score = 0;
     entry.gold_pieces = 0;
     entry.games_finished = 0;
@@ -1770,6 +1780,7 @@ void movePlayer(int newRow, int newCol) {
     }
     if (game_map[newRow][newCol] == PASSWORD) {
     generatedoorpass();
+    mvprintw(1, 75, "    ");
     mvprintw(1, 75, "%s", pass);
     refresh();
     napms(10000);
@@ -1885,7 +1896,11 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
             if (correct) {
                 attron(COLOR_PAIR(2));
                 mvprintw(1, 2, "                                                                                  ");
-                mvprintw(1, 2, "You unlocked the door!");
+                int random = rand() % 4;
+                if(random == 0)mvprintw(1, 2, "With a satisfying click, the door swings open. You feel unstoppable.");
+                else if(random == 1) mvprintw(1, 2, "The lock gives in. The door creaks open, evealing what lies beyond...");
+                else if(random == 2) mvprintw(1, 2, "You hear a faint click- success! You try to act like you knew what you were doing.");
+                else if(random == 3) mvprintw(1, 2, "Victory! The door swings open. Time to see if it was worth the trouble.");
                 attroff(COLOR_PAIR(2));
                 refresh();
                 unlocked[newRow][newCol] = 1;
@@ -2049,8 +2064,10 @@ void printMap() {
                 switch (game_map[i][j]) {
                 case WALLV: 
                 if(type[i][j] == 2) attron(COLOR_PAIR(3));
+                if(type[i][j] == 3) attron(COLOR_PAIR(5));
                 mvaddch(i, j, '|'); 
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
+                if(type[i][j] == 3) attroff(COLOR_PAIR(5));
                 break;
                 case FLOOR: mvaddch(i, j, '.'); break;
                 case dagger_SHOT: mvaddch(i, j, ','); break;
@@ -2063,27 +2080,33 @@ void printMap() {
                 case EMPTY: mvaddch(i, j, ' '); break;
                 case WALLH: 
                 if(type[i][j] == 2) attron(COLOR_PAIR(3));
+                if(type[i][j] == 3) attron(COLOR_PAIR(5));
                 mvaddch(i, j, '_');
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
+                if(type[i][j] == 3) attroff(COLOR_PAIR(5));
                  break;
                 case WALLNO: mvaddch(i, j, ' '); break;
                 case TRAP: mvaddch(i, j, '.'); break;
                 case STAIRCASE: mvaddch(i, j, '<'); break;
                 case SWALLH: 
                 if(type[i][j] == 2) attron(COLOR_PAIR(3));
+                if(type[i][j] == 3) attron(COLOR_PAIR(5));
                 mvaddch(i, j, '_');
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
+                if(type[i][j] == 3) attroff(COLOR_PAIR(5));
                  break;
                 case SWALLV:
                 if(type[i][j] == 2) attron(COLOR_PAIR(3)); 
+                if(type[i][j] == 3) attron(COLOR_PAIR(5));
                 mvaddch(i, j, '|'); 
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
+                if(type[i][j] == 3) attroff(COLOR_PAIR(5));
                 break;
                 case SWALLNO: mvaddch(i, j, ' '); break;
                 case ANCIENTKEY: 
                     attron(COLOR_PAIR(5));
                     mvaddch(i, j, '^');
-                    attroff(COLOR_PAIR(4));
+                    attroff(COLOR_PAIR(5));
                      break;
                 case PASSWORD:
                     attron(COLOR_PAIR(5));
@@ -2307,7 +2330,7 @@ void make_it_treasure(int row, int col, int roomRows, int roomCols){
     endpoint(row, col, roomRows, roomCols);
 }
 void trapsfortreasure(int row, int col, int roomRows, int roomCols){
-    int retries = 5;
+    int retries = 10;
     while (retries--)
     {
         int rown = (rand()% (roomRows-2)) + row + 1;
@@ -2491,11 +2514,11 @@ void move_monsters(){
                     && game_map[monster[i].row + 1][monster[i].col] != PILLAR){
                        if(player.row != monster[i].row  + 1 && player.col != monster[i].col) monster[i].row ++;
                        else {
-                            attron(COLOR_PAIR(1));
+                            if(monster[i].alive){attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
                             player.health --;
-                            getch();
+                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2506,11 +2529,11 @@ void move_monsters(){
                     && game_map[monster[i].row - 1][monster[i].col] != PILLAR){
                         if(player.row != monster[i].row -1 && player.col != monster[i].col)monster[i].row --;
                         else {
-                            attron(COLOR_PAIR(1));
+                            if(monster[i].alive){attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
                             player.health --;
-                            getch();
+                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2522,11 +2545,11 @@ void move_monsters(){
                     && game_map[monster[i].row][monster[i].col + 1] != PILLAR){
                         if(player.row != monster[i].row && player.col != monster[i].col + 1)monster[i].col ++;
                         else {
-                            attron(COLOR_PAIR(1));
+                            if(monster[i].alive){attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
                             player.health --;
-                            getch();
+                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2537,11 +2560,11 @@ void move_monsters(){
                     && game_map[monster[i].row][monster[i].col-1] != PILLAR){
                         if(player.row != monster[i].row && player.col != monster[i].col - 1)monster[i].col --;
                         else {
-                            attron(COLOR_PAIR(1));
+                            if(monster[i].alive){attron(COLOR_PAIR(1));
                             mvprintw(1,2, "You got hit by %s!", monster[i].name);
                             attroff(COLOR_PAIR(1));
-                            player.health --; 
-                            getch();
+                            player.health --;
+                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2564,6 +2587,7 @@ void throwweapon(){
             mvprintw(1, 2, "You hit %s", monster[i].name);
             if (monster[i].hits >= monster[i].lives) {
                 monster[i].alive = 0;
+                monster[i].moving = 0;
                 monster[i].moves = monster[i].max_moves;
                 attron(COLOR_PAIR(2));
                 mvprintw(1, 2, "You killed %s", monster[i].name);
@@ -2835,37 +2859,6 @@ void throwweapon(){
             last_shot = 27;
         }
         if(ch == 'b'){
-            // int hit = 0;
-            // for(int i = 1; i<= 5; i++){
-            //     if(!hit){
-            //         for(int j = 0; j < monsters_count; j++){
-            //             if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
-            //                 monster[j].hits += 5;
-            //                 mvprintw(1, 2, "You hit %s", monster[j].name);
-            //                 hit = 1;
-            //                 player.dagger --;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(monster[j].hits >= monster[j].lives && monster[j]. alive){
-            //                 monster[j].moving = 0;
-            //                 monster[j].moves = monster[j].max_moves;
-            //                 monster[j].alive = 0;
-            //                 attron(COLOR_PAIR(2));
-            //                 mvprintw(1, 2, "You killed %s", monster[j].name);
-            //                 attroff(COLOR_PAIR(2));
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
-            //             || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
-            //                 player.dagger --;
-            //                 game_map[player.row + i  - 1][player.col - i + 1] = dagger_SHOT;
-            //                 hit = 1;
-            //             }
-            //         }
-            //     }
-            // }
             int hit = 0;
     for (int i = 1; i <= 5; i++) {
         if (!hit) {
@@ -4416,6 +4409,18 @@ void print_message(int message){
             else if(random == 3) mvprintw(1, 2, "The potion's effects wear off. You're not worse, just not better anymore.");
             else if(random == 4) mvprintw(1, 2, "The potions effects fade. it's like your body forgot how to be invincible.");
         }
+        else if(message == 3){
+            int random = rand() % 9;
+            if(random ==0) mvprintw(17, 65, "You died. The enemies take a group photo with your corpse.");
+            if(random==1) mvprintw(17,65, "Game Over! The enemies loot your pockets for snacks.");
+            if(random == 2) mvprintw(17, 65 "Your adventure ends... but at least you looked cool.");
+            if(random == 3) mvprintw(17,65, "You fade into darkness. Somewhere, a daemon laughs at you.");
+            if(random == 4) mvprintw(17, 65, "Game over! Your last words? \"This was a bad idea\"");
+            if(random == 5) mvprintw(17, 65, "Your adventure ends. The undeed is now wearing your boots.");
+            if(random == 6) mvprintw(17, 65, "You collapse. The snake slithers away with your wallet.");
+            if(random == 7) mvprintw(17, 65, "You have been deleted from existence. Press any key to pretend that didn't happen.");
+            if(random == 8) mvprintw(17, 65, "Congratulations! You're now part of the dungeon decor.");
+        }
         current_message = -1;
         refresh();
-}
+} 
