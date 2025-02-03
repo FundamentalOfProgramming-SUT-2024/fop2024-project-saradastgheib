@@ -178,6 +178,10 @@ void throwweapon();
 void lastshot(int last_shot);
 void makeitenchant(int row, int col, int roomRows, int roomCols);
 void print_message(int message);
+char generaterandompass(int type);
+int retrieve_password(const char *username, char *password);
+void display_profile();
+void monster_shot();
 int main() {
     setlocale(LC_ALL, "");
     initscr();
@@ -185,6 +189,8 @@ int main() {
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
+    srand(time(NULL));
+    curs_set(0);
     init_pair(1, COLOR_RED, COLOR_BLACK);
     init_pair(2, COLOR_GREEN, COLOR_BLACK);
     init_pair(3, COLOR_MAGENTA, COLOR_BLACK);
@@ -194,23 +200,47 @@ int main() {
     init_pair(6, COLOR_CYAN, COLOR_BLACK);
     init_pair(7, COLOR_BLACK, COLOR_WHITE);
     init_pair(8, COLOR_MAGENTA, COLOR_WHITE);
-    // printf("══════════════════════════════════════\n");
-    // printf("      🗡️  WELCOME TO THE DUNGEON  💀    \n");
-    // printf("══════════════════════════════════════\n");
-    // printf("      ⚔️  [S] Start Playing    \n");
-    // printf("      👤  [P] Profile          \n");
-    // printf("      📜  [H] Hall of Fame     \n");
-    // printf("      🚪  [E] Exit             \n");
-    // printf("══════════════════════════════════════\n");
-    // printf("       Beware the dangers ahead...    \n");
-    printf("══════════════════════════════════════\n");
-
-
     main_menu();
     endwin();
     return 0;
 }
-
+void display_profile(){
+    clear();
+    attron(A_BOLD | COLOR_PAIR(6));
+    mvprintw(10, 30, "===============================");
+    mvprintw(11, 30, " Welcome to the Dungeon Quest! ");
+    mvprintw(12, 30, "===============================");
+    attroff(A_BOLD | COLOR_PAIR(6));
+    attron(COLOR_PAIR(5));
+    mvprintw(14, 30, "Welcome, brave adventurer! 🎮");
+    mvprintw(16, 30, "You are about to embark on a grand quest %s.", current_username);
+    attroff(COLOR_PAIR(5));
+    attron(COLOR_PAIR(2));
+    mvprintw(18, 30, "Your goal: Conquer the dungeon and collect loot!");
+    mvprintw(20,30, "Use the keys to move:");
+    mvprintw(22, 30, "h - Left, j - Up, k - Down, l - Right");
+    mvprintw(24, 30, "u - Upper-left, y - Upper-right, b - Lower-left, n - Lower-right");
+    attroff(COLOR_PAIR(2));
+    mvprintw(26, 30, "Good luck, %s! May your quest be victorious! ✨", current_username);
+    getch();
+}
+int retrieve_password(const char *username, char *password){
+    FILE *file = fopen(FILENAME, "r");
+    if(!file){
+        return 0;
+    }
+    char file_username[50], file_password[50], file_email[100];
+    while (fscanf(file, "%s %s %s", file_username, file_password, file_email)== 3){
+        if(strcmp(username, file_username) == 0){
+            strcpy(password, file_password);
+            fclose(file);
+            return 1;
+        }
+    }
+    fclose(file);
+    return 0;
+    
+}
 void main_menu() {
     int choice = 0;
     char *options[] = {
@@ -233,7 +263,7 @@ void main_menu() {
             }
             else{
                 mvprintw(3+i, 4, "%s", options[i]);
-            }
+            }   
         }
         int key = getch();
         if(key == KEY_UP) choice = (choice -1 +number_of_options) % number_of_options;
@@ -241,7 +271,7 @@ void main_menu() {
         else if(key== '\n'){
             if(choice == 0) startplaying();
             else if(choice == 1){
-
+                display_profile();
             } // profile
             else if(choice == 2){
                 displayhalloffame();
@@ -305,7 +335,7 @@ void startplaying(){
     }
 }
 void registeruser() {
-    WINDOW *win = newwin(12, 50, 5, 10);
+    WINDOW *win = newwin(12, 60, 5, 10);
     keypad(win, TRUE);
     box(win, 0, 0);
     mvwprintw(win, 1, 2, "-REGISTER NEW USER-");
@@ -356,6 +386,7 @@ void registeruser() {
 flushinp();
 mvwprintw(win, 5, 2, "                                               ");
     while (1) {
+        mvwprintw(win , 10, 2, "if you want a random password press the down arrow key.");
         mvwprintw(win, 6, 2, "Password: ");
         mvwprintw(win, 6,12, "                                 ");
         //mvwprintw(win, 8, 2, "                                       ");
@@ -376,6 +407,24 @@ mvwprintw(win, 5, 2, "                                               ");
                 password[i++] = ch;
                 mvwaddch(win, 6, 12 + i - 1, '*');
             }
+            else if (ch == KEY_DOWN)
+            {
+                mvwprintw(win , 7, 2, "                                                       ");
+                char password[8];
+                password[0] = generaterandompass(3);
+                password[1] = generaterandompass(2);
+                password[2] = generaterandompass(1);
+                password[3] = generaterandompass(1);
+                password[4] = generaterandompass(1);
+                password[5] = generaterandompass(1);
+                password[6] = generaterandompass(1);
+                password[7] = '\0';
+                mvwprintw(win , 10, 2, "Your password is %s", password);
+            }
+            
+            else if(ch == 27) {
+            startplaying();
+        }
             wrefresh(win);
         }
         password[i] = '\0';
@@ -413,7 +462,7 @@ mvwprintw(win, 5, 2, "                                               ");
     mvwprintw(win, 7, 2, "                                               ");
     while(1){
         mvwprintw(win, 8, 2, "Email: ");
-        mvwprintw(win, 8,12, "                                  ");
+        mvwprintw(win, 8, 9, "                                  ");
         wrefresh(win);
         i=0;
         memset(email, 0, sizeof(email));
@@ -428,14 +477,17 @@ mvwprintw(win, 5, 2, "                                               ");
                 if ((i>0))
                 {
                     i--;
-                    mvwaddch(win, 8, 12+i, ' ');
-                    wmove(win, 8, 12+i);
+                    mvwaddch(win, 8, 9+i, ' ');
+                    wmove(win, 8, 9+i);
                 }
             }
             else if(i<49 && isprint(ch)) {
                 email[i++] = ch;
-                mvwaddch(win, 8, 12+i-1, ch);
+                mvwaddch(win, 8, 9+i-1, ch);
             }
+            else if(ch == 27) {
+            startplaying();
+        }
             wrefresh(win);
         }
         if (!validate_email(email)) {
@@ -449,13 +501,13 @@ mvwprintw(win, 5, 2, "                                               ");
         break;
     }
     }
-    mvwprintw(win, 9, 2, "                    ");
+    mvwprintw(win, 9, 2, "                           ");
     User user;
     strcpy(user.username, username);
     strcpy(user.password, password);
     strcpy(user.email, email);
     save_user(user);
-
+    mvwprintw(win, 10, 2, "                                                       ");
     wattron(win, COLOR_PAIR(2));
     mvwprintw(win, 10, 2, "Registered successfully!");
     wattroff(win, COLOR_PAIR(2));
@@ -536,6 +588,9 @@ void login(){
                 username[i++] = ch;
                 mvwaddch(win, 4, 12+i-1, ch);
             }
+            else if(ch == 27) {
+            startplaying();
+        }
             wrefresh(win);
         }
         if(!user_exists(username)){
@@ -560,10 +615,23 @@ void login(){
         i=0;
         memset(password, 0, sizeof(password));
         while(1){
+            mvwprintw(win, 7, 2, "Press down arrow if you forgot your password.");
             ch = wgetch(win);
             if(ch == '\n' || ch == KEY_ENTER) {
                 password[i]= '\0';
                 break;
+            }
+            else if(ch == KEY_DOWN){
+                char stored_password[50];
+                if(retrieve_password(username, stored_password)){
+                    mvwprintw(win, 8, 2, "                                                       ");
+                    mvwprintw(win, 8, 2, "Your password: %s", stored_password);
+                }
+                else{
+                    mvwprintw(win, 8, 2, "Password retrieval failed!");
+                }
+                wrefresh(win);
+                continue;
             }
             else if(ch== KEY_BACKSPACE || ch ==127) {
                 if(i>0) {
@@ -576,6 +644,9 @@ void login(){
                 password[i++] = ch;
                 mvwaddch(win, 6,12+i-1, '*');
             }
+            else if(ch == 27) {
+            startplaying();
+        }
             wrefresh(win);
         }
         password[i] = '\0';
@@ -583,7 +654,7 @@ void login(){
             strcpy(current_username, username);
             current_username[sizeof(current_username) - 1] = '\0';
             wattron(win, COLOR_PAIR(2));
-            mvwprintw(win, 8, 2, "                           ");
+            mvwprintw(win, 8, 2, "                                             ");
             mvwprintw(win, 8, 2, "Login successful");
             wattroff(win, COLOR_PAIR(2));
             wrefresh(win);
@@ -853,8 +924,8 @@ void game_area(){
     moves = 0;
     last_shot = 0;
     clear();
+    mvprintw(1, 2, "This is where messages should appear");
     refresh();
-    curs_set(0);
     if(strcmp(game_mode, "Legendary") == 0) max_health = 5;
     else if(strcmp(game_mode, "Insane") == 0) max_health = 10;
     else if(strcmp(game_mode, "Hard") == 0) max_health = 15;
@@ -875,6 +946,7 @@ void game_area(){
     player.speed = 0; 
     player.power = 0;
     player.healthp = 0;
+    current_message  = 4;
     strcpy(entry.username, current_username);
     current_floor = 0;
     if(!load_user_data(&entry)){
@@ -890,7 +962,9 @@ void game_area(){
         mvprintw(35, 70, "Broken keys: %d", player.brokenkeys);
         mvprintw(35, 100, "Total score: %d", player.score);
         mvprintw(35, 130, "Gold: %d", player.golds);
+        
         refresh();
+
         int ch = getch();
         switch (ch)
         {
@@ -957,7 +1031,7 @@ void game_area(){
             printall();
             break;
         case 'p':
-            WINDOW *winp = newwin(14, 76, 5, 10);
+            {WINDOW *winp = newwin(14, 76, 5, 10);
             keypad(winp, TRUE);
             box(winp, 0, 0);
             mvwprintw(winp, 1, 2, "-LIST OF POTIONS-");
@@ -1010,8 +1084,8 @@ void game_area(){
                 }
             }
             delwin(winp);
-                break;
-        case 'i':
+                break;}
+        case 'i':{
             WINDOW *winn = newwin(20, 60, 5, 10);
             keypad(winn, TRUE);
             box(winn, 0, 0);
@@ -1023,9 +1097,9 @@ void game_area(){
             else if(player.weapon_in_hand == 4) mvwprintw(winn, 3, 2, "You have normal arrows in your hand!");
             else if(player.weapon_in_hand == 5) mvwprintw(winn, 3, 2, "You have a sword in your hand!");
             wattroff(winn, COLOR_PAIR(2));
-            if(player.mace != 0)mvwprintw(winn, 5, 2, "(m)%d mace(s)  damage: 5  ", player.mace);
+            if(player.mace != 0)mvwprintw(winn, 5, 2, "(m)%d mace(s)", player.mace);
             if(player.mace == 0)mvwprintw(winn, 5, 2, "You don't have any maces");
-            if(player.dagger != 0) mvwprintw(winn, 7, 2, "(d)%d dagger(s)", player.dagger);
+            if(player.dagger != 0) mvwprintw(winn, 7, 2, "(d)%d dagger(s) ", player.dagger);
             if(player.dagger == 0) mvwprintw(winn, 7, 2, "You don't have any daggers");
             if(player.magic_wand != 0) mvwprintw(winn, 9, 2, "(g)%d magic wand(s)", player.magic_wand);
             if(player.magic_wand == 0) mvwprintw(winn, 9, 2, "You don't have any magic wands");
@@ -1147,12 +1221,12 @@ void game_area(){
             }
             wrefresh(winn);
             delwin(winn);
-            break;
+            break;}
         case 'a':
             lastshot(last_shot);
             break;
         case 'e':
-            WINDOW *win = newwin(14, 50, 5, 10);
+            {WINDOW *win = newwin(14, 50, 5, 10);
             keypad(win, TRUE);
             box(win, 0, 0);
             mvwprintw(win, 1, 2, "-LIST OF FOODS-");
@@ -1167,8 +1241,6 @@ void game_area(){
                     mvwprintw(win, 9, 2, "You don't have any food with you");
                     wattroff(win, COLOR_PAIR(1));
                     wrefresh(win);
-                    getch();
-                    delwin(win);
                 }
                 else{
                     int not_consumed  = 1;
@@ -1224,7 +1296,7 @@ void game_area(){
             else {
                 delwin(win);
             }
-            break;
+            break;}
         case 'f':
             ch = getch();
             if(ch == 'y'){
@@ -1298,6 +1370,7 @@ void game_area(){
         break;
         case ' ':
          throwweapon();
+         monster_shot();
         default:
             break;
         }
@@ -1412,12 +1485,15 @@ void difficulty_level(){
             }
             else if(choice == 2){
                 strcpy(game_mode, "Hard");
+                return;
             }
             else if(choice == 3){
                 strcpy(game_mode, "Insane");
+                return;
             }
             else if(choice == 4){
                 strcpy(game_mode, "Legendary");
+                return;
             }
         }
         else if(key == 27) return;
@@ -1430,6 +1506,7 @@ void choose_color(){
         "Blue",
         "Magenta",
         "Green",
+        "White"
     };
     int number_of_options = sizeof(options) / sizeof(options[0]);
     while(1){
@@ -1452,6 +1529,7 @@ void choose_color(){
             if(choice == 0) strcpy(character_color, "Blue");
             else if(choice==1) strcpy(character_color, "Magenta");
             else if(choice==2) strcpy(character_color, "Green");
+            else if(choice == 3) strcpy(character_color, "White");
             return;
         }
         else if(key == 27) return;
@@ -1462,6 +1540,7 @@ void initialize_map(){
         for(int j=0; j<MAXCOL; j++){
             visible[i][j]= 0;
             unlocked[i][j] = 0;
+            type[i][j] = 0;
         }
     }
     for(int i=0; i<MAXROW; i++){
@@ -1566,7 +1645,6 @@ void makeitvisible(int start_row,int start_col,int rowscount,int colscount){
     player.col = start_col + 1;
 }
 void generate_random_map(int staircase_row, int staircase_col, int staircase_roomRows, int staircase_roomCols) {
-    srand(time(NULL));
     initialize_map();
     int roomcount = rand() % 5 + 6;
     int traproom = rand() % roomcount;
@@ -1665,9 +1743,6 @@ void movePlayer(int newRow, int newCol) {
         player.health--;
     }
     if(moves % 20 == 19){
-        // player.speed = 0;
-        // player.power = 0;
-        // player.healthp = 0;
         if(player.speed) {
             player.speed = 0;
             current_message = 0;
@@ -1681,7 +1756,7 @@ void movePlayer(int newRow, int newCol) {
             current_message = 2;
         }
     }
-    if(moves % 100 == 74){
+    if(moves % 70 == 69){
         int random = rand() % 3;
         if(random == 0 && player.fancy_food != 0){
             player.fancy_food --;
@@ -1695,8 +1770,6 @@ void movePlayer(int newRow, int newCol) {
             player.normal_food --;
             player.rotten_food ++;
         }
-        player.speed = 0;
-        player.power = 0;
     }
     if (newRow >= 0 && newRow < MAXROW && newCol >= 0 && newCol < MAXCOL &&
         (game_map[newRow][newCol] == FLOOR || game_map[newRow][newCol] == DOOR || game_map[newRow][newCol] == CORRIDOR || game_map[newRow][newCol]==SWALLH || game_map[newRow][newCol] == SWALLV || game_map[newRow][newCol] == SWALLNO || game_map[newRow][newCol] == STAIRCASE)) {
@@ -1780,7 +1853,6 @@ void movePlayer(int newRow, int newCol) {
     }
     if (game_map[newRow][newCol] == PASSWORD) {
     generatedoorpass();
-    mvprintw(1, 75, "    ");
     mvprintw(1, 75, "%s", pass);
     refresh();
     napms(10000);
@@ -1821,6 +1893,7 @@ if(game_map[newRow][newCol] == GOLD){
     if(g){game_map[newRow][newCol] = FLOOR;
     player.row = newRow;
     player.col = newCol;
+    current_message =7;
     player.golds ++;}
     else{
     player.row = newRow;
@@ -1831,6 +1904,7 @@ if(game_map[newRow][newCol] == BLACKGOLD){
     if(g){game_map[newRow][newCol] = FLOOR;
     player.row = newRow;
     player.col = newCol;
+    current_message = 7;
     player.golds += 5;}
     else{
     player.row = newRow;
@@ -1898,7 +1972,7 @@ if (game_map[newRow][newCol] == PASSWORDDOOR) {
                 mvprintw(1, 2, "                                                                                  ");
                 int random = rand() % 4;
                 if(random == 0)mvprintw(1, 2, "With a satisfying click, the door swings open. You feel unstoppable.");
-                else if(random == 1) mvprintw(1, 2, "The lock gives in. The door creaks open, evealing what lies beyond...");
+                else if(random == 1) mvprintw(1, 2, "The lock gives in. The door creaks open, revealing what lies beyond...");
                 else if(random == 2) mvprintw(1, 2, "You hear a faint click- success! You try to act like you knew what you were doing.");
                 else if(random == 3) mvprintw(1, 2, "Victory! The door swings open. Time to see if it was worth the trouble.");
                 attroff(COLOR_PAIR(2));
@@ -1984,6 +2058,7 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
         makeitvisible(start_row, start_col, room_rows, room_cols);
         player.row = start_row + room_rows / 2;
         player.col = start_col + room_cols / 2;
+        current_message =5;
     }
 
 
@@ -2015,22 +2090,30 @@ if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
                 visible[i][j] = 1;
             }
         }
+        current_message = 6;
     }
     for(int i =0; i<monsters_count; i++){
         if(player.row >= monster[i].row - 1 && player.row <= monster[i].row + 1
         && player.col >= monster[i].col - 1 && player.col <= monster[i].col + 1 
-        && monster[i].hits < monster[i].lives && monster[i].moves < monster[i].max_moves)
-        monster[i].moving = 1;
+        && monster[i].alive ){
+        if(monster[i].moves < monster[i].max_moves) monster[i].moving = 1;
+        if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+        else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+        else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+        else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+        else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
+        player.health --;
+        }
     }
 
 if(game_map[newRow][newCol] == END){
     clear();
     attron(COLOR_PAIR(2));
-    mvprintw(17, 75, "Congrtulations! You won the game");
+    print_message(8);
     attroff(COLOR_PAIR(2));
     refresh();
+    napms(5000);
     getch();
-    napms(10000);
     if(load_user_data(&entry)){
         entry.score = entry.score + player.golds*(current_floor+1)/3;
         entry.gold_pieces = entry.gold_pieces + player.golds;
@@ -2079,8 +2162,8 @@ void printMap() {
                 case WINDO: mvaddch(i, j, '='); break;
                 case EMPTY: mvaddch(i, j, ' '); break;
                 case WALLH: 
-                if(type[i][j] == 2) attron(COLOR_PAIR(3));
                 if(type[i][j] == 3) attron(COLOR_PAIR(5));
+                if(type[i][j] == 2) attron(COLOR_PAIR(3));
                 mvaddch(i, j, '_');
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
                 if(type[i][j] == 3) attroff(COLOR_PAIR(5));
@@ -2089,15 +2172,15 @@ void printMap() {
                 case TRAP: mvaddch(i, j, '.'); break;
                 case STAIRCASE: mvaddch(i, j, '<'); break;
                 case SWALLH: 
-                if(type[i][j] == 2) attron(COLOR_PAIR(3));
                 if(type[i][j] == 3) attron(COLOR_PAIR(5));
+                if(type[i][j] == 2) attron(COLOR_PAIR(3));
                 mvaddch(i, j, '_');
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
                 if(type[i][j] == 3) attroff(COLOR_PAIR(5));
                  break;
                 case SWALLV:
-                if(type[i][j] == 2) attron(COLOR_PAIR(3)); 
                 if(type[i][j] == 3) attron(COLOR_PAIR(5));
+                if(type[i][j] == 2) attron(COLOR_PAIR(3)); 
                 mvaddch(i, j, '|'); 
                 if(type[i][j] == 2) attroff(COLOR_PAIR(3));
                 if(type[i][j] == 3) attroff(COLOR_PAIR(5));
@@ -2106,7 +2189,7 @@ void printMap() {
                 case ANCIENTKEY: 
                     attron(COLOR_PAIR(5));
                     mvaddch(i, j, '^');
-                    attroff(COLOR_PAIR(5));
+                    attroff(COLOR_PAIR(4));
                      break;
                 case PASSWORD:
                     attron(COLOR_PAIR(5));
@@ -2330,7 +2413,7 @@ void make_it_treasure(int row, int col, int roomRows, int roomCols){
     endpoint(row, col, roomRows, roomCols);
 }
 void trapsfortreasure(int row, int col, int roomRows, int roomCols){
-    int retries = 10;
+    int retries = 5;
     while (retries--)
     {
         int rown = (rand()% (roomRows-2)) + row + 1;
@@ -2361,6 +2444,7 @@ void placenormalpotions(int row, int col, int roomRows, int roomCols){
 }
 void placegold(int row, int col, int roomRows, int roomCols){
     int count = rand() % 10;
+    if(type[row][col] == 3) count += rand()%10;
     while(count -- ){
         int rown = (rand() % (roomRows-2)) + row + 1;
         int coln = (rand()%(roomCols-2)) + col + 1;
@@ -2497,7 +2581,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
 }
 void move_monsters(){
     for(int i =0 ; i<monsters_count; i++){
-        if(monster[i].moving){
+        if(monster[i].moving && monster[i].alive){
             int start_row = monster[i].row, end_row = monster[i].row, start_col = monster[i].col, end_col = monster[i].col;
             while (start_row > 0 && game_map[start_row - 1][monster[i].col] != EMPTY && game_map[start_row - 1][monster[i].col] != CORRIDOR ) start_row--;
             while (end_row < MAXROW - 1 && game_map[end_row + 1][monster[i].col] != EMPTY && game_map[end_row + 1][monster[i].col] != CORRIDOR ) end_row++;
@@ -2514,11 +2598,12 @@ void move_monsters(){
                     && game_map[monster[i].row + 1][monster[i].col] != PILLAR){
                        if(player.row != monster[i].row  + 1 && player.col != monster[i].col) monster[i].row ++;
                        else {
-                            if(monster[i].alive){attron(COLOR_PAIR(1));
-                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
-                            attroff(COLOR_PAIR(1));
+                            if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+                            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+                            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+                            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
                             player.health --;
-                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2529,11 +2614,12 @@ void move_monsters(){
                     && game_map[monster[i].row - 1][monster[i].col] != PILLAR){
                         if(player.row != monster[i].row -1 && player.col != monster[i].col)monster[i].row --;
                         else {
-                            if(monster[i].alive){attron(COLOR_PAIR(1));
-                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
-                            attroff(COLOR_PAIR(1));
+                            if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+                            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+                            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+                            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
                             player.health --;
-                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2545,11 +2631,12 @@ void move_monsters(){
                     && game_map[monster[i].row][monster[i].col + 1] != PILLAR){
                         if(player.row != monster[i].row && player.col != monster[i].col + 1)monster[i].col ++;
                         else {
-                            if(monster[i].alive){attron(COLOR_PAIR(1));
-                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
-                            attroff(COLOR_PAIR(1));
-                            player.health --;
-                            getch();}
+                            if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+                            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+                            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+                            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
+                            player.health --;;
                         }
                         monster[i].moves ++;
                     }
@@ -2560,11 +2647,12 @@ void move_monsters(){
                     && game_map[monster[i].row][monster[i].col-1] != PILLAR){
                         if(player.row != monster[i].row && player.col != monster[i].col - 1)monster[i].col --;
                         else {
-                            if(monster[i].alive){attron(COLOR_PAIR(1));
-                            mvprintw(1,2, "You got hit by %s!", monster[i].name);
-                            attroff(COLOR_PAIR(1));
+                            if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+                            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+                            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+                            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
                             player.health --;
-                            getch();}
                         }
                         monster[i].moves ++;
                     }
@@ -2584,17 +2672,21 @@ void throwweapon(){
             abs(monster[i].col - player.col) <= 1) {
             monster[i].hits += 5;
             if(player.power) monster[i].hits += 5;
-            mvprintw(1, 2, "You hit %s", monster[i].name);
+            if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
+            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
+            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
+            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 13;
             if (monster[i].hits >= monster[i].lives) {
                 monster[i].alive = 0;
-                monster[i].moving = 0;
                 monster[i].moves = monster[i].max_moves;
-                attron(COLOR_PAIR(2));
-                mvprintw(1, 2, "You killed %s", monster[i].name);
-                attroff(COLOR_PAIR(2));
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
+                else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
+                else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
+                else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 18;
             }
             refresh();
-            getch();
         }
     }
     last_shot = 1;
@@ -2611,16 +2703,21 @@ void throwweapon(){
                     player.dagger --; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -2643,16 +2740,21 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -2666,36 +2768,7 @@ void throwweapon(){
             last_shot = 22;
         }
         if(ch == 'j'){
-            // int hit = 0;
-            // for(int i = player.row - 1; i>= player.row - 5; i--){
-            //     if(!hit){
-            //         for(int j = 0; j < monsters_count; j++){
-            //             if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
-            //                 monster[j].hits += 5;
-            //                 mvprintw(1, 2, "You hit %s", monster[j].name);
-            //                 hit = 1;
-            //                 player.dagger --;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(monster[j].hits >= monster[j].lives && monster[j].alive){
-            //                 monster[j].moving = 0;
-            //                 monster[j].moves = monster[j].max_moves;
-            //                 attron(COLOR_PAIR(2));
-            //                 mvprintw(1,2, "You killed %s", monster[j].name);
-            //                 attroff(COLOR_PAIR(2));
-            //                 monster[j].alive = 0;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
-            //                 player.dagger --;
-            //                 game_map[i + 1][player.col] = dagger_SHOT;
-            //                 hit = 1;
-            //             }
-            //         }
-            //     }
-            // }
+        
             int hit = 0;
     for (int i = player.row - 1; i >= player.row - 5; i--) {
         if (!hit) {
@@ -2705,16 +2778,22 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -2737,20 +2816,26 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
-            if (!hit && (game_map[i][player.col] == WALLV || game_map[player.row][i] == SWALLV)) {
+            if (!hit && (game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV)) {
                 game_map[player.row][i + 1] = dagger_SHOT;
                 hit = 1;
                 player.dagger--; 
@@ -2769,16 +2854,22 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;;
                 }
-                    getch();
+                   
                     break; 
                 }
             }
@@ -2802,16 +2893,22 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -2835,16 +2932,22 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -2859,6 +2962,7 @@ void throwweapon(){
             last_shot = 27;
         }
         if(ch == 'b'){
+            
             int hit = 0;
     for (int i = 1; i <= 5; i++) {
         if (!hit) {
@@ -2868,16 +2972,22 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -2910,18 +3020,25 @@ void throwweapon(){
                 if (monster[j].row == player.row && monster[j].col == i && monster[j].alive) {
                     hit = 1;
                     player.magic_wand --; 
-                    if(player.power) monster[j].hits += 12;
-                    monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(player.power) monster[j].hits += 15;
+                    monster[j].hits += 15;
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -2944,16 +3061,23 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -2968,24 +3092,31 @@ void throwweapon(){
         }
         if(ch == 'j'){
             int hit = 0;
-            for (int i = player.row - 1; i >= player.row - 10; i++) {
+            for (int i = player.row - 1; i >= player.row - 10; i--) {
         if (!hit) {
             for (int j = 0; j < monsters_count; j++) {
                 if (monster[j].row == i && monster[j].col == player.col && monster[j].alive) {
                     hit = 1;
                     player.magic_wand --; 
+                    monster[j].moving = 0;
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3008,16 +3139,23 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -3040,16 +3178,23 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3073,16 +3218,23 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     ;
                     break; 
                 }
             }
@@ -3106,16 +3258,22 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                     
                     break; 
                 }
             }
@@ -3139,16 +3297,22 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3182,16 +3346,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3205,36 +3375,6 @@ void throwweapon(){
     last_shot = 41;
 }
         if(ch == 'k'){
-            // int hit = 0;
-            // for(int i = player.row + 1; i<= player.row +5; i++){
-            //     if(!hit){
-            //         for(int j = 0; j < monsters_count; j++){
-            //             if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
-            //                 monster[j].hits += 5;
-            //                 mvprintw(1, 2, "You hit %s", monster[j].name);
-            //                 hit = 1;
-            //                 player.normal_arrow --;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(monster[j].hits >= monster[j].lives && monster[j].alive){
-            //                 monster[j].moving = 0;
-            //                 monster[j].alive = 0;
-            //                 monster[j].moves = monster[j].max_moves;
-            //                 attron(COLOR_PAIR(2));
-            //                 mvprintw(1,2, "You killed %s", monster[j].name);
-            //                 attroff(COLOR_PAIR(2));
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
-            //                 player.normal_arrow --;
-            //                 game_map[i-1][player.col] = normal_arrow_SHOT;
-            //                 hit =1;
-            //             }
-            //         }
-            //     }
-            // }
             int hit = 0;
     for (int i = player.row + 1; i <= player.row + 5; i++) {
         if (!hit) {
@@ -3244,16 +3384,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3267,36 +3413,6 @@ void throwweapon(){
             last_shot = 42;
         }
         if(ch == 'j'){
-            // int hit = 0;
-            // for(int i = player.row - 1; i>= player.row - 5; i--){
-            //     if(!hit){
-            //         for(int j = 0; j < monsters_count; j++){
-            //             if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
-            //                 monster[j].hits += 5;
-            //                 mvprintw(1, 2, "You hit %s", monster[j].name);
-            //                 hit = 1;
-            //                 player.normal_arrow --;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(monster[j].hits >= monster[j].lives && monster[j].alive){
-            //                 monster[j].moving = 0;
-            //                 monster[j].moves = monster[j].max_moves;
-            //                 attron(COLOR_PAIR(2));
-            //                 mvprintw(1,2, "You killed %s", monster[j].name);
-            //                 attroff(COLOR_PAIR(2));
-            //                 monster[j].alive = 0;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
-            //                 player.normal_arrow --;
-            //                 game_map[i + 1][player.col] = normal_arrow_SHOT;
-            //                 hit = 1;
-            //             }
-            //         }
-            //     }
-            // }
             int hit = 0;
     for (int i = player.row - 1; i >= player.row - 5; i--) {
         if (!hit) {
@@ -3306,16 +3422,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                   if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3338,16 +3460,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3370,16 +3498,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                   
                     break; 
                 }
             }
@@ -3403,16 +3537,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3436,16 +3576,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3460,37 +3606,6 @@ void throwweapon(){
             last_shot = 47;
         }
         if(ch == 'b'){
-            // int hit = 0;
-            // for(int i = 1; i<= 5; i++){
-            //     if(!hit){
-            //         for(int j = 0; j < monsters_count; j++){
-            //             if(monster[j].row == player.row + i && monster[j].col == player.col - i && monster[j].alive){
-            //                 monster[j].hits += 5;
-            //                 mvprintw(1, 2, "You hit %s", monster[j].name);
-            //                 hit = 1;
-            //                 player.normal_arrow --;
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(monster[j].hits >= monster[j].lives && monster[j]. alive){
-            //                 monster[j].moving = 0;
-            //                 monster[j].moves = monster[j].max_moves;
-            //                 monster[j].alive = 0;
-            //                 attron(COLOR_PAIR(2));
-            //                 mvprintw(1, 2, "You killed %s", monster[j].name);
-            //                 attroff(COLOR_PAIR(2));
-            //                 refresh();
-            //                 getch();
-            //             }
-            //             if(game_map[player.row + i][player.col - i] == WALLV || game_map[player.row + i][player.col - i] == WALLH || game_map[player.row + i][player.col - i] == WALLNO
-            //             || game_map[player.row + i][player.col - i] == SWALLV ||game_map[player.row + i][player.col - i] == SWALLH || game_map[player.row + i][player.col - i] == SWALLNO  ){
-            //                 player.normal_arrow --;
-            //                 game_map[player.row + i  - 1][player.col - i + 1] = normal_arrow_SHOT;
-            //                 hit = 1;
-            //             }
-            //         }
-            //     }
-            // }
             int hit = 0;
     for (int i = 1; i <= 5; i++) {
         if (!hit) {
@@ -3500,16 +3615,22 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3538,19 +3659,23 @@ void throwweapon(){
             && monster[i].alive){
                 monster[i].hits += 10;
                 if(player.power) monster[i].hits += 10;
-                mvprintw(1, 2, "You hit %s", monster[i].name);
-                refresh();
-                getch();
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 13;
             }
             if(monster[i].hits >= monster[i].lives && monster[i].alive){
                 monster[i].moving = 0;
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                attron(COLOR_PAIR(2));
-                mvprintw(1, 2, "You killed %s", monster[i].name);
-                attroff(COLOR_PAIR(2));
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 18;
                 refresh();
-                getch();
+                 ;
             }
         }
     }
@@ -3562,16 +3687,20 @@ void lastshot(int last_shot){
         if (abs(monster[i].row - player.row) <= 1 &&
             abs(monster[i].col - player.col) <= 1) {
             monster[i].hits += 5;
-            mvprintw(1, 2, "You hit %s", monster[i].name);
+            if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
+            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
+            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
+            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 13;
             if (monster[i].hits >= monster[i].lives) {
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                attron(COLOR_PAIR(2));
-                mvprintw(1, 2, "You killed %s", monster[i].name);
-                attroff(COLOR_PAIR(2));
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 18;
             }
-            refresh();
-            getch();
         }
     }
     }
@@ -3584,16 +3713,22 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger --; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3608,35 +3743,39 @@ void lastshot(int last_shot){
     }
     else if(last_shot == 22 && player.dagger > 0){
         int hit = 0;
-            for(int i = player.row + 1; i<= player.row +5; i++){
-                if(!hit){
-                    for(int j = 0; j < monsters_count; j++){
-                        if(monster[j].row == i && monster[j].col == player.col && monster[j].alive){
-                            monster[j].hits += 12;
-                            mvprintw(1, 2, "You hit %s", monster[j].name);
-                            hit = 1;
-                            player.dagger --;
-                            refresh();
-                            getch();
-                        }
-                        if(monster[j].hits >= monster[j].lives && monster[j].alive){
-                            monster[j].moving = 0;
-                            monster[j].alive = 0;
-                            monster[j].moves = monster[j].max_moves;
-                            attron(COLOR_PAIR(2));
-                            mvprintw(1,2, "You killed %s", monster[j].name);
-                            attroff(COLOR_PAIR(2));
-                            refresh();
-                            getch();
-                        }
-                        if(game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH){
-                            player.dagger --;
-                            game_map[i-1][player.col] = dagger_SHOT;
-                            hit =1;
-                        }
-                    }
+    for (int i = player.row + 1; i <= player.row + 5; i++) {
+        if (!hit) {
+            for (int j = 0; j < monsters_count; j++) {
+                if (monster[j].row == i && monster[j].col == player.col && monster[j].alive) {
+                    hit = 1;
+                    player.dagger--; 
+                    monster[j].hits += 12;
+                    if(player.power) monster[j].hits += 12;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
+                    if (monster[j].hits >= monster[j].lives) {
+                    monster[j].alive = 0;
+                    monster[j].moving = 0;
+                    monster[j].moves = monster[j].max_moves;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
+                }
+                    break; 
                 }
             }
+            if (!hit && (game_map[i][player.col] == WALLH || game_map[player.row][i] == SWALLH)) {
+                game_map[i-1][player.col] = dagger_SHOT;
+                hit = 1;
+                player.dagger--; 
+            }
+        }
+    }
     }
     else if(last_shot == 23 && player.dagger > 0){
         int hit = 0;
@@ -3647,16 +3786,22 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
+                    
                     break; 
                 }
             }
@@ -3678,20 +3823,25 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
-            if (!hit && (game_map[i][player.col] == WALLV || game_map[player.row][i] == SWALLV)) {
+            if (!hit && (game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV)) {
                 game_map[player.row][i + 1] = dagger_SHOT;
                 hit = 1;
                 player.dagger--; 
@@ -3709,16 +3859,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3741,16 +3896,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3773,16 +3933,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3805,16 +3970,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3842,25 +4012,31 @@ void lastshot(int last_shot){
             for (int j = 0; j < monsters_count; j++) {
                 if (monster[j].row == player.row && monster[j].col == i && monster[j].alive) {
                     hit = 1;
-                    player.dagger --; 
-                    monster[j].hits += 12;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    player.magic_wand --; 
+                    monster[j].hits += 15;
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
             if (!hit && (game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV)) {
-                game_map[player.row][i - 1] = dagger_SHOT;
+                game_map[player.row][i - 1] = magic_wand_SHOT;
                 hit = 1;
-                player.dagger--; 
+                player.magic_wand--; 
             }
         }
     }
@@ -3876,16 +4052,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3899,7 +4081,7 @@ void lastshot(int last_shot){
     }
     else if(last_shot == 33 && player.magic_wand > 0){
         int hit = 0;
-            for (int i = player.row - 1; i >= player.row - 10; i++) {
+            for (int i = player.row - 1; i >= player.row - 10; i--) {
         if (!hit) {
             for (int j = 0; j < monsters_count; j++) {
                 if (monster[j].row == i && monster[j].col == player.col && monster[j].alive) {
@@ -3907,16 +4089,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3938,16 +4126,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -3969,16 +4163,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4001,16 +4201,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4033,16 +4239,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4065,16 +4277,22 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    monster[j].moving = 0;
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4103,16 +4321,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4134,16 +4357,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4165,16 +4393,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4196,16 +4429,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4227,16 +4465,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4259,16 +4502,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4291,16 +4539,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4323,16 +4576,21 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    mvprintw(1, 2, "You hit %s", monster[j].name);
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 13;
                     if (monster[j].hits >= monster[j].lives) {
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    attron(COLOR_PAIR(2));
-                    mvprintw(1, 2, "You killed %s", monster[j].name);
-                    attroff(COLOR_PAIR(2));
+                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                    getch();
                     break; 
                 }
             }
@@ -4348,6 +4606,7 @@ void lastshot(int last_shot){
     }
     else if(last_shot >= 41 && last_shot <= 48 && player.normal_arrow <= 0){
         attron(COLOR_PAIR(1));
+        mvprintw(1, 2, "                                                                                                     ");
         mvprintw(1, 2, "You don't have enough normal arrows!");
         attroff(COLOR_PAIR(1));
         refresh();
@@ -4359,19 +4618,22 @@ void lastshot(int last_shot){
             && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
             && monster[i].alive){
                 monster[i].hits += 5;
-                mvprintw(1, 2, "You hit %s", monster[i].name);
-                refresh();
-                getch();
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+                    else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
+                    else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
+                    else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
+                    else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 13;
+                refresh(); 
             }
             if(monster[i].hits >= monster[i].lives && monster[i].alive){
                 monster[i].moving = 0;
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                attron(COLOR_PAIR(2));
-                mvprintw(1, 2, "You killed %s", monster[i].name);
-                attroff(COLOR_PAIR(2));
-                refresh();
-                getch();
+                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                    else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
+                    else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 18;
             }
         }
     }
@@ -4384,7 +4646,7 @@ void makeitenchant(int row, int col, int roomRows, int roomCols){
     }
 }
 void print_message(int message){
-        mvprintw(1, 2, "                                                                                  ");
+        mvprintw(1, 2, "                                                                                                                                  ");
         if(message == 0){
             int random = rand() % 5;
             if(random == 0) mvprintw(1,2, "Your legs feel heavy again. The speed... was that just a dream?");
@@ -4411,16 +4673,304 @@ void print_message(int message){
         }
         else if(message == 3){
             int random = rand() % 9;
-            if(random ==0) mvprintw(17, 65, "You died. The enemies take a group photo with your corpse.");
-            if(random==1) mvprintw(17,65, "Game Over! The enemies loot your pockets for snacks.");
-            if(random == 2) mvprintw(17, 65 "Your adventure ends... but at least you looked cool.");
-            if(random == 3) mvprintw(17,65, "You fade into darkness. Somewhere, a daemon laughs at you.");
-            if(random == 4) mvprintw(17, 65, "Game over! Your last words? \"This was a bad idea\"");
-            if(random == 5) mvprintw(17, 65, "Your adventure ends. The undeed is now wearing your boots.");
-            if(random == 6) mvprintw(17, 65, "You collapse. The snake slithers away with your wallet.");
-            if(random == 7) mvprintw(17, 65, "You have been deleted from existence. Press any key to pretend that didn't happen.");
-            if(random == 8) mvprintw(17, 65, "Congratulations! You're now part of the dungeon decor.");
+            mvprintw(3, 58, "     (×_×)☠️  ");
+            mvprintw(4, 59, "     /|\\   💀 GAME OVER 💀 ");
+            mvprintw(5, 59, "     / \\  ");
+            if(random ==0) mvprintw(17, 46, "You died. The enemies take a group photo with your corpse.");
+            if(random==1) mvprintw(17,49, "Game Over! The enemies loot your pockets for snacks.");
+            if(random == 2) mvprintw(17, 49, "Your adventure ends... but at least you looked cool.");
+            if(random == 3) mvprintw(17,46, "You fade into darkness. Somewhere, a deamon laughs at you.");
+            if(random == 4) mvprintw(17, 50, "Game over! Your last words? \"This was a bad idea\"");
+            if(random == 5) mvprintw(17, 46, "Your adventure ends. The undeed is now wearing your boots.");
+            if(random == 6) mvprintw(17, 48, "You collapse. The snake slithers away with your wallet.");
+            if(random == 7) mvprintw(17, 34, "You have been deleted from existence. Press any key to pretend that didn't happen.");
+            if(random == 8) mvprintw(17, 48, "Congratulations! You're now part of the dungeon decor.");
+            mvprintw(23, 41, "                                .");
+            mvprintw(24, 41, "                               -|-");
+            mvprintw(25, 41, "                                |");
+            mvprintw(26, 41, "                            .-'~~~`-.");
+            mvprintw(27, 41, "                          .'         `.");
+            mvprintw(28, 41, "                          |  R  I  P  |");
+            mvprintw(29, 41, "                          |           |");
+            mvprintw(30, 41, "                          |           |");
+            mvprintw(31, 41, "                        \\\\|           |//");
+            mvprintw(32, 41, "   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^");
+        }
+        else if(message == 4) {
+            int random = rand() % 14;
+            if(random == 0) mvprintw(1, 2, "Welcome, brave soul!\U0001F3F9The dungeon awaits... and so does your fate.");
+            if(random==1) mvprintw(1, 2, "You step into the shadows...\U0001F526Let's hope you step out alive.");
+            if(random == 2) mvprintw(1, 2, "A sword in your hand, a dungeon before you.\u2694Try not to die too fast.");
+            if(random == 3) mvprintw(1, 2, "The monsters are ready. Are you?\U0001F40D\U0001F525");
+            if(random == 4) mvprintw(1, 2, "You awaken in a dark place... and something is watching you\U0001F440");
+            if(random == 5) mvprintw(1, 2, "Oh great, another hero.\U0001F644 Let's see how long you last.");
+            if(random == 6) mvprintw(1, 2, "Welcome to the dungeon!\U0001F3F0 Don't worry the monsters are mostly friendly.");
+            if(random == 7) mvprintw(1, 2, "You enter... and immediately regret your life choices.\U0001F480");
+            if(random == 8) mvprintw(1, 2, "Congratulation! You've made the worst desicion of your life.\U0001F389");
+            if(random == 9) mvprintw(1, 2, "You hear wihspers in the dark...\U0001F56FToo late to turn back now");
+            if(random == 10) mvprintw(1, 2, "The dungeon calls your name. Who told it?\U0001F56F");
+            if(random == 11) mvprintw(1, 2, "Something unseen stirs in the shadows... Welcome to your nightmare.\U0001F441");
+            if(random == 12) mvprintw(1, 2, "The air is thick with danger. Or maybe it's just the smell of rotten food.");
+            if(random == 13) mvprintw(1, 2, "A deep voice echoes: \"You should not have come here.\"\U0001F480");
+        }
+        else if(message == 5){
+            int random = rand() % 12;
+            if(random == 0) mvprintw(1, 2, "You step forward... deeper into the abyss.\U0001F526");
+            if(random == 1) mvprintw(1, 2, "The air grows colder. Something ancient stirs below... \U0001F3F0");
+            if(random == 2) mvprintw(1, 2, "With each  step, the shadows creep closer. Be ready.\u2694");
+            if(random == 3) mvprintw(1, 2, "The dungeon whispers your name. It knows you're here. \U0001F441");
+            if(random == 4) mvprintw(1, 2, "You descend further... and the real nightmare begins.");
+            if(random == 5) mvprintw(1, 2, "Down you go! Hope you brought a will.\U0001F4DC");
+            if(random == 6) mvprintw(1, 2, "The monsters below heard you coming. They're placing bets.\U0001F4B0");
+            if(random == 7) mvprintw(1, 2, "You descend... regretting every life choice that led you here.");
+            if(random == 8) mvprintw(1, 2, "The walls pulse as if alive... are they breathing?\U0001F52E");
+            if(random == 9) mvprintw(1, 2, "Something watches from the shadows. It does not blink.\U0001F440");
+            if(random == 10) mvprintw(1, 2, "The torchlight flickers. For a second, you swear you're not alone.\U0001F56F");
+            if(random == 11) mvprintw(1, 2, "A chill runs down your spine. Whatever's waiting below... it's hungry.\U0001F9B4");
+        }
+        else if(message == 6) {
+            if(type[player.row][player.col] == 3){
+                int random = rand() % 5;
+                if(random == 0) mvprintw(1, 2, "A pile of gold gleams in the dim light... but why is it just sitting there?\U0001F928");
+                else if(random == 1) mvprintw(1, 2, "Treasure! or is it a cleverly disguised death trap? only one way to find out.\U0001F6A8\U0001F4B0");
+                else if(random == 2) mvprintw(1, 2, "You see loot. You also see ominous spikes on the walls. Hmm.");
+                else if(random == 3) mvprintw(1, 2, "Glorious loot glows ahead. You're about to feel very lucky-or very dead.\u2620");
+                else if(random == 4) mvprintw(1, 2, "A golden idol sits atop a pedestal. You know how this ends.\U0002F3C6\U0001F525");
+            }
+            else {
+                int random = rand() % 6;
+                if(random == 0) mvprintw(1, 2, "You step into the room and immediately notice the clutter. There's a little bit of everything here.\U0001F52E\U0001F5E1");
+                else if(random == 1) mvprintw(1, 2, "The room is filled with old crates, scattered papers, and signs of past travelers. What will you find today?\U0001F4DC\U0001F6E1");
+                else if(random == 2) mvprintw(1, 2,"A table with strange tools, a half-empty potion bottle, and the scent of something burning.\u2697\U0001F525");
+                else if(random == 3) mvprintw(1, 2, "A pile of discarded armor, a glowing gem on the floor, and an oddly placed book.\U0001F4DA");
+                else if(random == 4) mvprintw(1, 2 ,"You step through the door and are greeted with a mix of ancient relics and rusted weapon. Something feels off.\U0001F5E1\U0001F56F");
+                else if(random == 5) mvprintw(1, 2, "There's a strange energy in the air, mixed with the smell of old food and damp stone.\u26A1\U0001F356");
+            }
+        }
+        else if(message == 7){
+            int random = rand() % 4;
+            if(random == 0) mvprintw(1, 2, "You scoop up the shimmering gold, feeling richer already.\U0001F4B0");
+            if(random == 1) mvprintw(1, 2, "Gold glints in your hands, gleaming like a treasure of the gods.\U0001F4B0");
+            if(random == 2) mvprintw(1, 2, "A heavy pouch of gold coins is yours! Time to splurge... or save\U0001F4B0");
+            if(random == 3) mvprintw(1, 2, "You pick up the gold and feel the weight of fortune.\U0001F4B0");
+        }
+        else if(message == 8){
+            int random = rand() %14;
+            if(random == 0) {
+                mvprintw(17, 50, "You have conquered the dungeon! Even the undead tip their hats to you.");
+                mvprintw(19, 74, "Your Score: %d", player.score);
+            }
+            if(random == 1){
+                mvprintw(17, 58, "You walked in as a warrior... and walked out a legend.");
+                mvprintw(19, 74, "Your Score: %d", player.score);
+            } 
+            if(random == 2){
+                mvprintw(17, 48, "You did it! The enemies all leave you a nice \"thanks for the fun!\" note.");
+                mvprintw(19, 74, "Your Score: %d", player.score);
+            } 
+            if(random == 3){
+                mvprintw(17, 40, "Victory! The enemies bow down in defeat... but probably still talk trash about you later.");
+                mvprintw(19, 74, "Your Score: %d", player.score);
+            } 
+            if(random == 4){
+                mvprintw(17, 65, "You emerge victorious, treasure in hand!");
+                mvprintw(19, 74, "Your final score : %d\U0001F3C6", player.score);
+            }
+            if(random == 5){
+                mvprintw(17, 66, "Legends will be told of your triumph!");
+                mvprintw(19, 74, "Your final score: %d\U0001F4dC\u2728", player.score);
+            }
+            if(random == 6){
+                mvprintw(17, 64, "The dungeon trembles as you claim victory!");
+                mvprintw(19, 74,"Your final score: %d\u2694\U0001F525", player.score);
+            }
+            if(random == 7){
+                mvprintw(17, 68, "You made it out alive... and rich!");
+                mvprintw(19, 74, "Your final score :%d\U0001F4B0", player.score);
+            }
+            if(random == 8){
+                mvprintw(17, 63, "Even the moosters whisper your name in fear.");
+                mvprintw(19, 74, "Your final score :%d\U0001F451", player.score);
+            }
+            if(random == 9){
+                mvprintw(17, 52, "You crushed the dungeon, left no loot behind, and became a legend.");
+                mvprintw(19, 74, "Your final score :%d\U0001F3C5", player.score);
+            }
+            if(random == 10){
+                mvprintw(17, 51, "After all that chaos, was it worth it? Your final score says yes:%d\U0001F3AD", player.score);
+            }
+            if(random == 11){
+                mvprintw(17, 58, "You walk away from the dungeon battered but victorious!");
+                mvprintw(19, 74, "Your final score :%d\U0001F6E1", player.score);
+            }
+            if(random == 12){
+                mvprintw(17, 62, "Gold, glory, and victory!");
+                mvprintw(19, 74, "Your final score:%d\U0001F37E\U0001F38A", player.score);
+            }
+            if(random == 13){
+                mvprintw(17, 60, "You have conquered the dungeon... but at what cost? oh right, a %d-point victory!\U0001F3F4", player.score);
+            }
+        }
+        else if(message == 9){
+            int random = rand() % 8;
+            if(random == 0) mvprintw(1, 2, "Your blade cuts into the deamon, but dark energy pulses from the wound!");
+            else if(random == 1) mvprintw(1, 2, "The deamon snarls, its fiery eyes flickering with rage.");
+            else if(random == 2) mvprintw(1, 2, "You strike, but the deamon only laughs. 'Is that all?'");
+            else if(random == 3) mvprintw(1, 2, "Black blood drips from the deamon’s wound, sizzling on the ground.");
+            else if(random == 4) mvprintw(1, 2, "Your attack lands, but the deamon seems to enjoy the pain!");
+            else if(random == 5) mvprintw(1, 2, "You stab the deamon! It gasps dramatically. 'How dare you?!'");
+            else if(random == 6) mvprintw(1, 2, "You slash at the deamon! It winks at you. Weird.");
+            else if(random == 7) mvprintw(1, 2, "Your attack lands! The deamon rolls its eyes. 'Wow. So original.'");
+            
+        }
+        else if(message == 10){
+            int random = rand() % 7;
+            if(random == 0) mvprintw(1, 2, "Your weapon sizzles as it strikes the monster’s molten skin!");
+            else if(random == 2) mvprintw(1, 2, "Flames burst from the wound, nearly burning you in the process!");
+            else if(random == 3) mvprintw(1, 2, "You slash through the fire, feeling the heat singe your arms!");
+            else if(random == 4) mvprintw(1, 2, "The monster roars, smoke pouring from its burning wounds!");
+            else if(random == 5) mvprintw(1, 2, "Your attack lands, but the flames only seem to grow fiercer!");
+            else if(random == 6) mvprintw(1, 2, "You slash through flames! Your eyebrows are now… optional.");
+            
+        }
+        else if(message == 11){
+            int random = rand() % 5;
+            if(random == 0) mvprintw(1,2, "You stab at the giant’s thick hide! It roars in pain.");
+            else if(random == 1) mvprintw(1, 2, "Your attack barely makes a dent in the giant’s massive frame!");
+            else if(random == 2) mvprintw(1, 2, "The giant grunts as your blade cuts through its flesh.");
+            else if(random == 3) mvprintw(1, 2,"You slice at the giant’s leg—it stumbles but doesn’t fall!");
+            else if(random == 4) mvprintw(1, 2, "The giant swipes at you angrily, knocking dust into the air.");
+            
+        }
+        else if(message == 12) {
+            int random = rand() % 5;
+            if(random == 0) mvprintw(1, 2, "The snake hisses in pain as your blade slices through its scales!");
+            else if(random == 1) mvprintw(1, 2, "You strike, but the snake slithers back, ready to counter!");
+            else if(random == 2) mvprintw(1, 2, "Your attack lands, venom dripping from the wound!");
+            else if(random == 3) mvprintw(1, 2, "The snake coils in agony, its tail lashing violently!");
+            else if(random == 4) mvprintw(1, 2, "You pierce the snake’s hide—it writhes in pain!");
+        
+        }
+        else if(message == 13){
+            int random = rand() % 5;
+            if(random == 0) mvprintw(1, 2, "Your weapon cuts through rotting flesh, but the undead keeps moving!");
+            else if(random == 1) mvprintw(1, 2, "Bones crack as your attack lands, but the creature fights on.");
+            else if(random == 2) mvprintw(1, 2, "The undead lets out a guttural groan, unfazed by the wound!");
+            else if(random == 3) mvprintw(1, 2, "You swing, and a piece of decayed flesh falls to the ground!");
+            else if(random == 4) mvprintw(1, 2, "Your strike breaks a rib, but the undead doesn’t seem to care.");
+            
+        }
+        else if(message == 14){
+            int random = rand() % 5;
+            attron(COLOR_PAIR(2));
+            if(random == 0) mvprintw(1, 2, "The deamon lets out an unholy scream as its body dissolves into shadows.");
+            else if(random == 1) mvprintw(1, 2, "Its laughter fades into silence... but you feel it watching from the void.");
+            else if(random == 2) mvprintw(1, 2, "The deamon collapses, whispering, 'I'll see you... again...");
+            else if(random == 3) mvprintw(1, 2, "Dark flames consume its form, leaving behind only a scorched mark on the ground.");
+            else if(random == 4) mvprintw(1, 2, "It crumbles into ash. Somewhere, another deamon takes notes on your technique.");
+            attroff(COLOR_PAIR(2));
+        }
+        else if(message == 15){
+            int random = rand() % 4;
+            attron(COLOR_PAIR(2));
+            if(random == 0) mvprintw(1, 2, "The monster’s flames flicker and die out, leaving only a pile of smoldering ash.");
+            else if(random == 1) mvprintw(1, 2, "A final explosion of fire erupts before the monster collapses into embers.");
+            else if(random == 2) mvprintw(1, 2, "Its body cools, hardening into black stone before crumbling to dust.");
+            else if(random == 3) mvprintw(1, 2, "The heat in the air fades as the fire-breathing monster lets out a final roar.");
+            attroff(COLOR_PAIR(2));
+        }
+        else if(message == 16){
+            int random = rand() % 4;
+            attron(COLOR_PAIR(2));
+            if(random == 0) mvprintw(1, 2, "The giant crashes to the ground, shaking the dungeon like an earthquake.");
+            else if(random == 1) mvprintw(1, 2, "With a final groan, the giant slumps over, defeated.");
+            else if(random == 2) mvprintw(1, 2, "Its massive body collapses, kicking up a cloud of dust.");
+            else if(random == 3) mvprintw(1, 2, "The dungeon rumbles as the giant’s last breath fades into silence.");
+            attroff(COLOR_PAIR(2));
+        }
+        else if(message == 17){
+            int random = rand() % 4;
+            attron(COLOR_PAIR(2));
+            if(random == 0) mvprintw(1, 2, "The snake’s body twitches one last time before going still.");
+            else if(random == 1) mvprintw(1, 2, "It lets out a final hiss before collapsing into a lifeless coil.");
+            else if(random == 2) mvprintw(1, 2, "The serpent writhes, then stops moving. Victory!");
+            else if(random == 3) mvprintw(1, 2, "Its forked tongue flickers one last time before falling limp.");
+            attroff(COLOR_PAIR(2));
+        }
+        else if(message == 18){
+            int random = rand() % 4;
+            attron(COLOR_PAIR(2));
+            if(random == 0) mvprintw(1, 2, "The undead collapses into a heap of bones and dust.");
+            else if(random == 1) mvprintw(1, 2, "Its eyes fade into darkness as it crumbles to the ground.");
+            else if(random == 2) mvprintw(1, 2, "A final groan escapes its lips before silence takes over.");
+            else if(random == 3) mvprintw(1, 2, "The undead falls apart, finally finding rest… or so you hope.");
+            attroff(COLOR_PAIR(2));
+        }
+        else if(message == 19){
+            int random = rand() % 3;
+            attron(COLOR_PAIR(1));
+            if(random == 0) mvprintw(1, 2, "The daemon grins as it sears your soul!");
+            else if(random == 1) mvprintw(1, 2, "You smell something burning… oh wait, it's you.");
+            else if(random == 2) mvprintw(1, 2, "The daemon chuckles, ‘You call that dodging?’");
+            attroff(COLOR_PAIR(1));
+        }
+        else if(message == 20){
+            int random = rand() % 3;
+            attron(COLOR_PAIR(1));
+            if(random == 0) mvprintw(1, 2, "The giant’s club slams you like a fly on a window!");
+            else if(random == 1) mvprintw(1, 2, "Your bones rattle like dice in the giant’s fist!");
+            else if(random == 2) mvprintw(1, 2, "You briefly experience flight before hitting the ground.");
+            attroff(COLOR_PAIR(1));
+        }
+        else if(message == 21){
+            int random = rand()% 3;
+            attron(COLOR_PAIR(1));
+            if(random == 0) mvprintw(1, 2, "You get a free dragon roast! Too bad you’re the main course.");
+            else if(random == 1) mvprintw(1, 2, "The monster exhales, and so does your will to live.");
+            else if(random == 2) mvprintw(1, 2, "You now understand how toast feels.");
+            attroff(COLOR_PAIR(1));
+        }
+        else if(message == 22){
+            int random = rand() % 3;
+            attron(COLOR_PAIR(1));
+            if(random == 0) mvprintw(1, 2, "You feel a sharp bite—congrats, you’re venomous now!");
+            else if(random == 1) mvprintw(1, 2, "The snake hisses, ‘I was aiming for your ego.’");
+            else if(random == 2) mvprintw(1, 2, "You just got slapped by something with no arms.");
+            else if(random == 3) mvprintw(1, 2, "Poison seeps in… your body hates you now.");
+            attroff(COLOR_PAIR(1));
+        }
+        else if(message == 23){
+            int random = rand() % 3;
+            attron(COLOR_PAIR(1));
+            if(random == 0) mvprintw(1, 2, "A skeletal hand reaches into your soul… and pockets your dignity.");
+            else if(random == 1) mvprintw(1, 2, "You get hit with the stench of death… and a sword!");
+            else if(random == 2) mvprintw(1, 2, "A bony fist collides with your face. The skeleton cackles.");
+            attroff(COLOR_PAIR(2));
         }
         current_message = -1;
         refresh();
-} 
+}
+char generaterandompass(int type){
+    if (type == 3) {
+        return 'A' + rand() % 26; // Uppercase letter
+    } else if (type == 1) {
+        return 'a' + rand() % 26; // Lowercase letter
+    } else if (type == 2) {
+        return '0' + rand() % 10; // Digit
+    }
+}
+void monster_shot(){
+    for(int i = 0; i< monsters_count; i++){
+        if(player.row >= monster[i].row- 1 && player.row <= monster[i].row +1
+        && player.col >= monster[i].col -1 && player.col <= monster[i].col +1
+        && monster[i].alive){
+            if(rand() % 3 == 0){if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+            else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
+            else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+            else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
+            else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
+            player.health --;
+            monster[i].hits -- ;
+            }
+        }
+}}
