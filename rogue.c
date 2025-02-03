@@ -660,7 +660,7 @@ void login(){
             wrefresh(win);
             //HallOfFameEntry entry = {0};
             strcpy(entry.username, current_username);
-            savehall(entry);
+        
             getch();
             pre_game_area();
         }
@@ -1370,7 +1370,6 @@ void game_area(){
         break;
         case ' ':
          throwweapon();
-         monster_shot();
         default:
             break;
         }
@@ -2385,14 +2384,14 @@ void placepotions(int row, int col, int roomRows, int roomCols){
     int rown = (rand()% (roomRows-2)) + row + 1;
     int coln = (rand()% (roomCols-2)) + col + 1;
     if(game_map[rown][coln] == FLOOR){
-        int random = rand();
-        if(random % 3 == 0){
+        int random = rand() %3 ;
+        if(random== 0){
             game_map[rown][coln] = SPEED_POTION;
         }
-        if(random%3 == 1){
+        if(random == 1){
             game_map[rown][coln] = DAMAGE_POTION;
         }
-        if(random%3==2){
+        if(random ==2){
             game_map[rown][coln] = HEALTH_POTION;
         }
     }
@@ -2418,7 +2417,7 @@ void trapsfortreasure(int row, int col, int roomRows, int roomCols){
     {
         int rown = (rand()% (roomRows-2)) + row + 1;
         int coln = (rand()% (roomCols-2)) + col + 1;
-        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] == TRAP;
+        if(game_map[rown][coln] == FLOOR) game_map[rown][coln] = TRAP;
     }
     
 }
@@ -2437,7 +2436,7 @@ void placenormalpotions(int row, int col, int roomRows, int roomCols){
     int random = rand()%3 +1 ;
     if(game_map[rown][coln]== FLOOR && random == 1) game_map[rown][coln] = HEALTH_POTION;
     else if(game_map[rown][coln]== FLOOR && random == 2) game_map[rown][coln] = DAMAGE_POTION;
-    else if(game_map[rown][coln]== FLOOR && random ==3) game_map[rown][coln] == SPEED_POTION;
+    else if(game_map[rown][coln]== FLOOR && random ==3) game_map[rown][coln] = SPEED_POTION;
     }
     
 
@@ -2666,13 +2665,14 @@ void move_monsters(){
 }
 void throwweapon(){
     if (player.weapon_in_hand == 1) {
-    for (int i = 0; i < monsters_count && i < 20; i++) {
+    if(rand()%3 != 0){
+        for (int i = 0; i < monsters_count && i < 20; i++) {
         if (!monster[i].alive) continue; 
         if (abs(monster[i].row - player.row) <= 1 &&
             abs(monster[i].col - player.col) <= 1) {
             monster[i].hits += 5;
             if(player.power) monster[i].hits += 5;
-            if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+            if(strcmp(monster[i].name, "Deamon") == 0)current_message =9;
             else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
             else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
             else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
@@ -2680,7 +2680,7 @@ void throwweapon(){
             if (monster[i].hits >= monster[i].lives) {
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                if(strcmp(monster[i].name, "Deamon") == 0)current_message =14;
                 else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
                 else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
                 else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
@@ -2688,6 +2688,9 @@ void throwweapon(){
             }
             refresh();
         }
+    }}
+    else{
+        monster_shot();
     }
     last_shot = 1;
 }
@@ -2703,7 +2706,7 @@ void throwweapon(){
                     player.dagger --; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2712,7 +2715,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2728,6 +2731,11 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row][player.col +5] = dagger_SHOT;
+        hit =1;
+        player.dagger--;
+    }
     last_shot = 21;
 }
         if(ch == 'k'){
@@ -2740,7 +2748,7 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2749,7 +2757,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2765,6 +2773,11 @@ void throwweapon(){
             }
         }
     }
+            if(!hit){
+                game_map[player.row + 5][player.col] = dagger_SHOT;
+                hit = 1;
+                player.dagger --; 
+            }
             last_shot = 22;
         }
         if(ch == 'j'){
@@ -2778,7 +2791,7 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2787,7 +2800,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2804,6 +2817,11 @@ void throwweapon(){
             }
         }
     }
+            if(!hit){
+                game_map[player.row - 5][player.col] = dagger_SHOT;
+                hit = 1;
+                player.dagger -- ;
+            }
             last_shot = 23;
         }
         if(ch == 'h'){
@@ -2816,7 +2834,7 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2825,7 +2843,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2842,6 +2860,11 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row][player.col - 5] = dagger_SHOT;
+            hit =1;
+            player.dagger --;
+        }
             last_shot = 24;
         }
         if(ch == 'u'){
@@ -2854,7 +2877,7 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2863,7 +2886,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2881,6 +2904,10 @@ void throwweapon(){
             }
         }
     }
+            if(!hit){
+                game_map[player.row - 5][player.col - 5] = dagger_SHOT;
+                player.dagger --;
+            }
             last_shot = 25;
         }
         if(ch == 'y'){
@@ -2893,7 +2920,7 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2902,13 +2929,12 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
                     else if(strcmp(monster[j].name, "Undeed") == 0) current_message = 18;
                 }
-                     ;
                     break; 
                 }
             }
@@ -2920,6 +2946,10 @@ void throwweapon(){
             }
         }
     }
+            if(!hit){
+                game_map[player.row - 5][player.col - 5] = dagger_SHOT;
+                player.dagger --;
+            }
             last_shot = 26;
         }
         if(ch == 'n'){
@@ -2932,7 +2962,7 @@ void throwweapon(){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2941,7 +2971,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2959,6 +2989,10 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row+5][player.col +5] = dagger_SHOT;
+            player.dagger -- ;
+        }
             last_shot = 27;
         }
         if(ch == 'b'){
@@ -2972,7 +3006,7 @@ void throwweapon(){
                     player.dagger--; 
                     if(player.power) monster[j].hits += 12;
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -2981,7 +3015,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -2998,6 +3032,10 @@ void throwweapon(){
                 player.dagger--; 
             }
         }
+    }
+    if(!hit){
+        game_map[player.row+5][player.col - 5] = dagger_SHOT;
+        player.dagger --;
     }
     last_shot = 28;
         }
@@ -3023,7 +3061,7 @@ void throwweapon(){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3032,7 +3070,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3049,6 +3087,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row][player.col + 5] = magic_wand_SHOT;
+        player.magic_wand --;
+    }
     last_shot = 31;
         }
         if(ch == 'k'){
@@ -3062,7 +3104,7 @@ void throwweapon(){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3071,7 +3113,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3088,6 +3130,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row + 10][player.col] = magic_wand_SHOT;
+        player.magic_wand --;
+    }
             last_shot = 32;
         }
         if(ch == 'j'){
@@ -3101,7 +3147,7 @@ void throwweapon(){
                     monster[j].moving = 0;
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3110,7 +3156,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3127,6 +3173,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row -10][player.col] = magic_wand_SHOT;
+        player.magic_wand --;
+    }
             last_shot = 33;
         }
         if(ch == 'h'){
@@ -3140,7 +3190,7 @@ void throwweapon(){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3149,7 +3199,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3166,6 +3216,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row + 10][player.col] = magic_wand_SHOT;
+        player.magic_wand --;
+    }
             last_shot = 34;
         }
         if(ch == 'u'){
@@ -3179,7 +3233,7 @@ void throwweapon(){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3188,7 +3242,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3206,6 +3260,10 @@ void throwweapon(){
             }
         }
     }
+            if(!hit){
+                game_map[player.row - 10][player.col + 10] = magic_wand_SHOT;
+                player.magic_wand -- ;
+            }
             last_shot = 35;
         }
         if(ch == 'y'){
@@ -3219,7 +3277,7 @@ void throwweapon(){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3228,7 +3286,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3246,6 +3304,10 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row - 10][player.col - 10] = magic_wand_SHOT;
+            player.magic_wand --;
+        }
             last_shot = 36;
         }
         if(ch == 'n'){
@@ -3258,7 +3320,7 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3267,7 +3329,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3285,6 +3347,10 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row+10][player.col + 10] = magic_wand_SHOT;
+            player.magic_wand --;
+        }
             last_shot = 37;
         }
         if(ch == 'b'){
@@ -3297,7 +3363,7 @@ void throwweapon(){
                     player.magic_wand --; 
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3306,7 +3372,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3323,6 +3389,10 @@ void throwweapon(){
                 player.magic_wand--; 
             }
         }
+    }
+    if(!hit){
+        game_map[player.row +  10][player.col - 10] = magic_wand_SHOT;
+        player.magic_wand --;
     }
             last_shot = 38;
         }
@@ -3346,7 +3416,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3355,7 +3425,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3372,6 +3442,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row][player.col + 5] = magic_wand_SHOT;
+        player.magic_wand --;
+    }
     last_shot = 41;
 }
         if(ch == 'k'){
@@ -3384,7 +3458,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3393,7 +3467,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3410,6 +3484,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row + 5][player.col] = normal_arrow_SHOT;
+        player.normal_arrow --;
+    }
             last_shot = 42;
         }
         if(ch == 'j'){
@@ -3422,7 +3500,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                   if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                   if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3431,7 +3509,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3441,18 +3519,22 @@ void throwweapon(){
                     break; 
                 }
             }
-            if (!hit && (game_map[i][player.col] == WALLH || game_map[player.row][i] == SWALLH)) {
+            if (!hit && (game_map[i][player.col] == WALLH || game_map[i][player.col] == SWALLH)) {
                 game_map[i + 1][player.col] = normal_arrow_SHOT;
                 hit = 1;
                 player.normal_arrow--; 
             }
         }
     }
+    if(!hit){
+        game_map[player.row - 5][player.col] = normal_arrow_SHOT;
+        player.normal_arrow --;
+    }
             last_shot = 43;
         }
         if(ch == 'h'){
             int hit = 0;
-    for (int i = player.col - 1; i >= player.row - 5; i--) {
+    for (int i = player.col - 1; i >= player.col - 5; i--) {
         if (!hit) {
             for (int j = 0; j < monsters_count; j++) {
                 if (monster[j].row == player.row && monster[j].col == i && monster[j].alive) {
@@ -3460,7 +3542,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3469,7 +3551,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3479,13 +3561,18 @@ void throwweapon(){
                     break; 
                 }
             }
-            if (!hit && (game_map[i][player.col] == WALLV || game_map[player.row][i] == SWALLV)) {
+            if (!hit && (game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV)) {
                 game_map[player.row][i + 1] = normal_arrow_SHOT;
                 hit = 1;
                 player.normal_arrow--; 
             }
         }
     }
+        if(!hit){
+            game_map[player.row][player.col - 5] = normal_arrow_SHOT;
+            player.normal_arrow--;
+            
+        }
             last_shot = 44;
         }
         if(ch == 'u'){
@@ -3498,7 +3585,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3507,7 +3594,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3525,6 +3612,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row - 5][player.col +5] = normal_arrow_SHOT;
+        player.normal_arrow--;
+    }
             last_shot = 45;
         }
         if(ch == 'y'){
@@ -3537,7 +3628,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3546,7 +3637,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3564,6 +3655,10 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row - 5][player.col -5] = normal_arrow_SHOT;
+            player.normal_arrow --;
+        }
             last_shot = 46;
         }
         if(ch == 'n'){
@@ -3576,7 +3671,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3585,7 +3680,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3603,6 +3698,10 @@ void throwweapon(){
             }
         }
     }
+        if(!hit){
+            game_map[player.row +5][player.col + 5] = normal_arrow_SHOT;
+            player.normal_arrow --;
+        }
             last_shot = 47;
         }
         if(ch == 'b'){
@@ -3615,7 +3714,7 @@ void throwweapon(){
                     player.normal_arrow--; 
                     monster[j].hits += 5;
                     if(player.power) monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3624,7 +3723,7 @@ void throwweapon(){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3642,6 +3741,10 @@ void throwweapon(){
             }
         }
     }
+    if(!hit){
+        game_map[player.row + 5][player.col - 5] = normal_arrow_SHOT;
+        player.normal_arrow --;
+    }
     last_shot = 48;
         }
     }
@@ -3653,13 +3756,13 @@ void throwweapon(){
         getch();
     }
     if(player.weapon_in_hand == 5){
-        for(int i =0; i< monsters_count; i++){
+        if(rand()% 3 != 0){for(int i =0; i< monsters_count; i++){
             if(monster[i].row <= player.row + 1 && monster[i].row >= player.row - 1
             && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
             && monster[i].alive){
                 monster[i].hits += 10;
                 if(player.power) monster[i].hits += 10;
-                if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+                if(strcmp(monster[i].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
@@ -3669,14 +3772,16 @@ void throwweapon(){
                 monster[i].moving = 0;
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                if(strcmp(monster[i].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
                     else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 18;
                 refresh();
-                 ;
             }
+        }}
+        else{
+            monster_shot();
         }
     }
 }
@@ -3687,7 +3792,7 @@ void lastshot(int last_shot){
         if (abs(monster[i].row - player.row) <= 1 &&
             abs(monster[i].col - player.col) <= 1) {
             monster[i].hits += 5;
-            if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+            if(strcmp(monster[i].name, "Deamon") == 0)current_message =9;
             else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
             else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
             else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
@@ -3695,7 +3800,7 @@ void lastshot(int last_shot){
             if (monster[i].hits >= monster[i].lives) {
                 monster[i].alive = 0;
                 monster[i].moves = monster[i].max_moves;
-                if(strcmp(monster[i].name, "deamon") == 0)current_message =14;
+                if(strcmp(monster[i].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[i].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[i].name, "Snake") == 0) current_message = 17;
@@ -3713,7 +3818,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger --; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3722,7 +3827,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3751,7 +3856,7 @@ void lastshot(int last_shot){
                     player.dagger--; 
                     monster[j].hits += 12;
                     if(player.power) monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3760,7 +3865,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3786,7 +3891,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3795,7 +3900,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3823,7 +3928,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3832,7 +3937,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3859,7 +3964,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3868,7 +3973,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3896,7 +4001,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3905,7 +4010,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3933,7 +4038,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3942,7 +4047,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -3970,7 +4075,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.dagger--; 
                     monster[j].hits += 12;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -3979,7 +4084,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4015,7 +4120,7 @@ void lastshot(int last_shot){
                     player.magic_wand --; 
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4024,7 +4129,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4053,7 +4158,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4062,7 +4167,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4090,7 +4195,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4099,7 +4204,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4127,7 +4232,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4136,7 +4241,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4164,7 +4269,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4173,7 +4278,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4202,7 +4307,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4211,7 +4316,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4240,7 +4345,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4249,7 +4354,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4278,7 +4383,7 @@ void lastshot(int last_shot){
                     if(player.power) monster[j].hits += 15;
                     monster[j].hits += 15;
                     monster[j].moving = 0;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4287,7 +4392,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4321,7 +4426,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4330,7 +4435,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4357,7 +4462,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4366,7 +4471,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4393,7 +4498,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4402,7 +4507,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4422,14 +4527,14 @@ void lastshot(int last_shot){
     }
     else if(last_shot == 44 && player.normal_arrow > 0){
         int hit = 0;
-    for (int i = player.col - 1; i >= player.row - 5; i--) {
+    for (int i = player.col - 1; i >= player.col - 5; i--) {
         if (!hit) {
             for (int j = 0; j < monsters_count; j++) {
                 if (monster[j].row == player.row && monster[j].col == i && monster[j].alive) {
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4438,7 +4543,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4447,8 +4552,8 @@ void lastshot(int last_shot){
                     break; 
                 }
             }
-            if (!hit && (game_map[i][player.col] == WALLV || game_map[player.row][i] == SWALLV)) {
-                game_map[player.row][i + 1] = normal_arrow_SHOT;
+            if (!hit && (game_map[player.row][i] == WALLV || game_map[player.row][i] == SWALLV)) {
+                game_map[player.row][i - 1] = normal_arrow_SHOT;
                 hit = 1;
                 player.normal_arrow--; 
             }
@@ -4465,7 +4570,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4474,7 +4579,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4491,6 +4596,11 @@ void lastshot(int last_shot){
             }
         }
     }
+        if(!hit){
+            game_map[player.row - 5][player.col +5] = normal_arrow_SHOT;
+            hit= 1;
+            player.normal_arrow--;
+        }
             last_shot = 45;
     }
     else if(last_shot == 46 && player.normal_arrow > 0){
@@ -4502,7 +4612,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4511,7 +4621,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4539,7 +4649,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4548,7 +4658,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4576,7 +4686,7 @@ void lastshot(int last_shot){
                     hit = 1;
                     player.normal_arrow--; 
                     monster[j].hits += 5;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =9;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 12;
@@ -4585,7 +4695,7 @@ void lastshot(int last_shot){
                     monster[j].alive = 0;
                     monster[j].moving = 0;
                     monster[j].moves = monster[j].max_moves;
-                    if(strcmp(monster[j].name, "deamon") == 0)current_message =14;
+                    if(strcmp(monster[j].name, "Deamon") == 0)current_message =14;
                     else if(strcmp(monster[j].name, "Fire Breathing Monster") == 0) current_message = 15;
                     else if(strcmp(monster[j].name, "Giant") == 0) current_message = 16;
                     else if(strcmp(monster[j].name, "Snake") == 0) current_message = 17;
@@ -4618,7 +4728,7 @@ void lastshot(int last_shot){
             && monster[i].col <= player.col + 1 && monster[i].col >= player.col -1
             && monster[i].alive){
                 monster[i].hits += 5;
-                if(strcmp(monster[i].name, "deamon") == 0)current_message =9;
+                if(strcmp(monster[i].name, "Deamon") == 0)current_message =9;
                     else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
                     else if(strcmp(monster[i].name, "Giant") == 0) current_message = 11;
                     else if(strcmp(monster[i].name, "Snake") == 0) current_message = 12;
@@ -4789,7 +4899,7 @@ void print_message(int message){
                 mvprintw(19, 74, "Your final score :%d\U0001F4B0", player.score);
             }
             if(random == 8){
-                mvprintw(17, 63, "Even the moosters whisper your name in fear.");
+                mvprintw(17, 63, "Even the monsters whisper your name in fear.");
                 mvprintw(19, 74, "Your final score :%d\U0001F451", player.score);
             }
             if(random == 9){
@@ -4805,7 +4915,7 @@ void print_message(int message){
             }
             if(random == 12){
                 mvprintw(17, 62, "Gold, glory, and victory!");
-                mvprintw(19, 74, "Your final score:%d\U0001F37E\U0001F38A", player.score);
+                mvprintw(19, 64, "Your final score:%d\U0001F37E\U0001F38A", player.score);
             }
             if(random == 13){
                 mvprintw(17, 60, "You have conquered the dungeon... but at what cost? oh right, a %d-point victory!\U0001F3F4", player.score);
@@ -4970,7 +5080,7 @@ void monster_shot(){
             else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
             else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
             player.health --;
-            monster[i].hits -- ;
             }
         }
-}}
+}
+}
