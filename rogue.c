@@ -948,11 +948,11 @@ void game_area(){
     clear();
     mvprintw(1, 2, "This is where messages should appear");
     refresh();
-    if(strcmp(game_mode, "Legendary") == 0) max_health = 5;
-    else if(strcmp(game_mode, "Insane") == 0) max_health = 10;
-    else if(strcmp(game_mode, "Hard") == 0) max_health = 15;
-    else if(strcmp(game_mode, "Normal") == 0) max_health = 20;
-    else if(strcmp(game_mode , "Easy") == 0) max_health = 25;
+    if(strcmp(game_mode, "Legendary") == 0) max_health = 10;
+    else if(strcmp(game_mode, "Insane") == 0) max_health = 20;
+    else if(strcmp(game_mode, "Hard") == 0) max_health = 30;
+    else if(strcmp(game_mode, "Normal") == 0) max_health = 40;
+    else if(strcmp(game_mode , "Easy") == 0) max_health = 50;
     player.health = max_health;
     player.ancientkeys = 0;
     player.brokenkeys = 0;
@@ -2426,7 +2426,7 @@ void place_battle_monsters(){
             battle_monster[battle_room_monsters_count].row = row;
             battle_monster[battle_room_monsters_count].col = col;
             battle_monster[battle_room_monsters_count].hits = 0;
-            battle_monster[battle_room_monsters_count].lives = 7;
+            battle_monster[battle_room_monsters_count].lives = 5;
             battle_monster[battle_room_monsters_count].max_moves = 0;
             battle_monster[battle_room_monsters_count].alive = 1;
             battle_monster[battle_room_monsters_count].moves = 0;
@@ -2829,7 +2829,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
-                monster[monsters_count].lives = 7;
+                monster[monsters_count].lives = 5;
                 monster[monsters_count].max_moves = 0;
                 monster[monsters_count].moves = 0;
                 monster[monsters_count].alive = 1;
