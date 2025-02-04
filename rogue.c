@@ -5,7 +5,8 @@
 #include <time.h>
 #include <stdio.h>
 #include <locale.h>
-#include <wchar.h>     
+#include <wchar.h>   
+#include <stdbool.h>  
 //403105941
 char current_username[50] = "";
 char game_mode[20] = "Easy";
@@ -143,7 +144,7 @@ int check_password(const char *username, const char *password);
 void game_area();
 void displayhalloffame();
 void savehall(const HallOfFameEntry entry);
-int load_user_data(HallOfFameEntry *entry);
+bool load_user_data(HallOfFameEntry *entry);
 void settings();
 void difficulty_level();
 void choose_color();
@@ -720,10 +721,12 @@ void pre_game_area(){
         }
     }
 }
-void savehall(const HallOfFameEntry entry) {
+void savehall(const HallOfFameEntry delta_entry) {
     HallOfFameEntry entries[100];
     int count = 0;
     int updated = 0;
+
+    // Read existing entries from the file
     FILE *file = fopen(HALLFILE, "r");
     if (file) {
         while (fscanf(file, "%s %d %d %d %ld",
@@ -732,27 +735,34 @@ void savehall(const HallOfFameEntry entry) {
                       &entries[count].gold_pieces,
                       &entries[count].games_finished,
                       &entries[count].first_game_time) == 5) {
-            if (strcmp(entries[count].username, entry.username) == 0) {
-                entries[count].score += entry.score;
-                entries[count].gold_pieces = entry.gold_pieces;
-                entries[count].games_finished += 1;
+            // Check if this entry matches the current user
+            if (strcmp(entries[count].username, delta_entry.username) == 0) {
+                // Add deltas to the existing entry
+                entries[count].score += delta_entry.score;
+                entries[count].gold_pieces += delta_entry.gold_pieces;
+                entries[count].games_finished += delta_entry.games_finished;
                 updated = 1;
             }
             count++;
         }
         fclose(file);
     }
+
+    // If no existing entry, add the delta as a new entry
     if (!updated) {
-        if (count < 100) { 
-            entries[count++] = entry;
+        if (count < 100) {
+            entries[count] = delta_entry; // Includes first_game_time for new users
+            count++;
         } else {
-            fprintf(stderr, "Error: Too many entries in the hall of fame.\n");
+            fprintf(stderr, "Error: Hall of fame is full.\n");
             return;
         }
     }
+
+    // Write all entries back to the file
     file = fopen(HALLFILE, "w");
     if (!file) {
-        fprintf(stderr, "Error: Could not open file for writing.\n");
+        fprintf(stderr, "Error: Could not save data.\n");
         return;
     }
     for (int i = 0; i < count; i++) {
@@ -763,7 +773,6 @@ void savehall(const HallOfFameEntry entry) {
                 entries[i].games_finished,
                 entries[i].first_game_time);
     }
-
     fclose(file);
 }
 void displayhalloffame(){
@@ -919,6 +928,7 @@ void printall() {
     clear();
 }
 void game_area(){
+    player.score = 0;
     int gold = 0;
     current_floor = 0;
     moves = 0;
@@ -1388,22 +1398,26 @@ void game_area(){
     sword_count = 0;
     pre_game_area();
 }
-int load_user_data(HallOfFameEntry *entry){
+bool load_user_data(HallOfFameEntry *entry) {
     FILE *file = fopen(HALLFILE, "r");
-    if(!file) return 0;
-    while(fscanf(file, "%s %d %d %d %ld",
-    entry->username,
-    &entry->score,
-    &entry->gold_pieces,
-    &entry->games_finished,
-    &entry->first_game_time)==5){
-        if(strcmp(entry->username, current_username)==0){
-            fclose(file);
-            return 1;
+    if (!file) return false;
+
+    bool found = false;
+    HallOfFameEntry temp;
+    while (fscanf(file, "%s %d %d %d %ld",
+                  temp.username,
+                  &temp.score,
+                  &temp.gold_pieces,
+                  &temp.games_finished,
+                  &temp.first_game_time) == 5) {
+        if (strcmp(temp.username, entry->username) == 0) {
+            *entry = temp; // Load existing data into the struct
+            found = true;
+            break;
         }
     }
     fclose(file);
-    return 0;
+    return found;
 }
 void settings(){
     int choice =0; 
@@ -2034,30 +2048,15 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
         while (end_col < MAXCOL - 1 && game_map[newRow][end_col + 1] != EMPTY && game_map[newRow][end_col + 1] != CORRIDOR) end_col++;
         int room_rows = end_row - start_row + 1;
         int room_cols = end_col - start_col + 1;
-        
-        
-    if(load_user_data(&entry)){
-        player.score += player.golds * (current_floor+1) / 3;
-        entry.score = entry.score + player.golds * (current_floor+1) / 3;
-        entry.gold_pieces = entry.gold_pieces + player.golds;
-    }
-    else {
-        entry.score = player.golds * (current_floor+1) / 3;
-        entry.gold_pieces = player.golds;
-        //entry.games_finished = 1;
-        entry.first_game_time = time(NULL);
-    }
-    savehall(entry);
-        entry.score = 0;
-        entry.gold_pieces = 0;
         monsters_count = 0;
         current_floor++;
-        player.golds = 0;
+        player.score += player.golds * (current_floor + 1) / 3;
         generate_random_map(start_row, start_col, room_rows-1, room_cols-1);
         makeitvisible(start_row, start_col, room_rows, room_cols);
         player.row = start_row + room_rows / 2;
         player.col = start_col + room_cols / 2;
         current_message =5;
+
     }
 
 
@@ -2104,36 +2103,45 @@ if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
         player.health --;
         }
     }
-
+moves ++;
 if(game_map[newRow][newCol] == END){
     clear();
+    player.score += player.golds * (current_floor + 1) / 3;
     attron(COLOR_PAIR(2));
     print_message(8);
     attroff(COLOR_PAIR(2));
     refresh();
     napms(5000);
     getch();
-    if(load_user_data(&entry)){
-        entry.score = entry.score + player.golds*(current_floor+1)/3;
-        entry.gold_pieces = entry.gold_pieces + player.golds;
-        entry.games_finished = entry.games_finished +1 ;
+
+    // Load existing data into a temporary entry
+    HallOfFameEntry existing_entry = {0};
+    strcpy(existing_entry.username, current_username);
+    bool isExistingUser = load_user_data(&existing_entry);
+
+    // Calculate deltas for this game
+    int score_delta = player.score;
+    int gold_delta = player.golds;
+    int games_delta = 1; // Always 1 per game
+
+    // Prepare a delta entry with ONLY this game’s contribution
+    HallOfFameEntry delta_entry = {0};
+    strcpy(delta_entry.username, current_username);
+    delta_entry.score = score_delta;
+    delta_entry.gold_pieces = gold_delta;
+    delta_entry.games_finished = games_delta;
+
+    // For new users, set first_game_time
+    if (!isExistingUser) {
+        delta_entry.first_game_time = time(NULL);
     }
-    else {
-        entry.score = player.golds * (current_floor+1) / 3;
-        entry.gold_pieces = player.golds;
-        entry.games_finished = 1;
-        entry.first_game_time = time(NULL);
-    }
-    savehall(entry);
-    entry.score = 0;
-    entry.gold_pieces = 0;
-    entry.games_finished = 0;
+
+    // Save the deltas (this game’s contribution)
+    savehall(delta_entry);
     monsters_count = 0;
     sword_count = 0;
     main_menu();
 }
-g = 1;
-moves ++;
 }
 void printMap() {
     clear(); 
