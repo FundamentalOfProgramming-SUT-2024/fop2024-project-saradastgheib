@@ -60,7 +60,7 @@ map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
 int visible[MAXROW][MAXCOL];
 int unlocked[MAXROW][MAXCOL];
-int type[MAXROW][MAXCOL]; // 3 for treasure 2 for enchant 
+int type[MAXROW][MAXCOL]; // 3 for treasure 2 for enchant 1 for nightmare
 typedef struct {
     char map[MAXROW][MAXCOL];
     int player_row, player_col;
@@ -172,6 +172,7 @@ void removepassword(int row, int col, int roomRows, int roomCols);
 void placeancientkey(int row, int col, int roomRows, int roomCols);
 void placepotions(int row, int col, int roomRows, int roomCols);
 void make_it_treasure(int row, int col, int roomRows, int roomCols);
+void makeitnightmare(int row, int col, int roomRows, int roomCols);
 void trapsfortreasure(int row, int col, int roomRows, int roomCols);
 void endpoint(int row, int col, int roomRows, int roomCols);
 void placenormalpotions(int row, int col, int roomRows, int roomCols);
@@ -1723,6 +1724,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
     int ancientkeyroom = rand() % roomcount;
     int retry_count = 0;
     int extra_room = 0;
+    int nightmare_room = rand() % (roomcount-1) + 1;
     room_index = 0;
     if (staircase_row >= 0 && staircase_col >= 0) {
         createRoom(staircase_row, staircase_col, staircase_roomRows, staircase_roomCols);
@@ -1763,6 +1765,7 @@ void generate_random_map(int staircase_row, int staircase_col, int staircase_roo
             rooms[room_index].center_y = start_row + rowscount / 2;
             rooms[room_index].width = colscount;
             rooms[room_index].length = rowscount;
+            if(room_index == nightmare_room) makeitnightmare(start_row, start_col,   rowscount, colscount);
             if(room_index == ancientkeyroom) placeancientkey(start_row, start_col, rowscount, colscount);
             if(room_index == 0 && current_floor == 0) {
                 player.row = start_row + 1;
@@ -2118,9 +2121,9 @@ if (game_map[newRow][newCol] == STAIRCASE && current_floor< 3) {
     }
 
 
-if(game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
+if((game_map[newRow][newCol] == DOOR || game_map[newRow][newCol]==SWALLH
     || game_map[newRow][newCol]==SWALLV || game_map[newRow][newCol]==SWALLNO
-    || (game_map[newRow][newCol]==PASSWORDDOOR && unlocked[newRow][newCol])) {
+    || (game_map[newRow][newCol]==PASSWORDDOOR && unlocked[newRow][newCol])) && type[newRow][newCol] != 1) {
         int k=0;
         for(int i=0; game_map[newRow + i][newCol]!= EMPTY && game_map[newRow + i][newCol]!= CORRIDOR; i++){
             k++;
@@ -2165,9 +2168,7 @@ moves ++;
 if(game_map[newRow][newCol] == END){
     clear();
     player.score += player.golds * (current_floor + 1) / 3;
-    attron(COLOR_PAIR(2));
     print_message(8);
-    attroff(COLOR_PAIR(2));
     refresh();
     napms(5000);
     getch();
@@ -2334,6 +2335,95 @@ void printMap() {
             }
         }
     }
+    if(type[player.row][player.col] == 1){for(int i = -2; i <=2; i++){
+        for(int j = -2; j<=2; j++){
+             switch (game_map[player.row+i][player.col+ j]) {
+                case WALLV: 
+                mvaddch(player.row+i, player.col+ j, '|'); 
+                break;
+                case FLOOR: mvaddch(player.row+i, player.col+ j, '.'); break;
+                case dagger_SHOT: mvaddch(player.row+i, player.col+ j, ','); break;
+                case magic_wand_SHOT: mvaddch(player.row+i, player.col+ j, ','); break;
+                case normal_arrow_SHOT: mvaddch(player.row+i, player.col+ j, ','); break;
+                case DOOR: mvaddch(player.row+i, player.col+ j, '+'); break;
+                case CORRIDOR: mvaddch(player.row+i, player.col+ j, '#'); break;
+                case PILLAR: mvaddch(player.row+i, player.col+ j, 'O'); break;
+                case WINDO: mvaddch(player.row+i, player.col+ j, '='); break;
+                case EMPTY: mvaddch(player.row+i, player.col+ j, ' '); break;
+                case WALLH:
+                mvaddch(player.row+i, player.col+ j, '_');
+                 break;
+                case WALLNO: mvaddch(player.row+i, player.col+ j, ' '); break;
+                case TRAP: mvaddch(player.row+i, player.col+ j, '.'); break;
+                case STAIRCASE: mvaddch(player.row+i, player.col+ j, '<'); break;
+                case SWALLH:
+                mvaddch(player.row+i, player.col+ j, '_');
+                 break;
+                case SWALLV: 
+                mvaddch(player.row+i, player.col+ j, '|');
+                break;
+                case SWALLNO: mvaddch(player.row+i, player.col+ j, ' '); break;
+                case ANCIENTKEY:
+                    mvaddch(player.row+i, player.col+ j, '^');
+                     break;
+                case PASSWORD:
+                    mvaddch(player.row+i, player.col+ j, '&');
+                    break;
+                case PASSWORDDOOR:
+                    if(unlocked[i][j]) {
+                        mvaddch(player.row+i, player.col+ j, '?');
+                    }
+                    else {
+                        mvaddch(player.row+i, player.col+ j, '@');
+                    }
+                    break;
+                case HEALTH_POTION:
+                mvaddch(player.row+i, player.col+ j, 'h');
+                break;
+                case DAMAGE_POTION:
+                mvaddch(player.row+i, player.col+ j, 'd'); 
+                break;
+                case SPEED_POTION:
+                mvaddch(player.row+i, player.col+ j, 's'); 
+                break;
+                case REVEALEDTRAP: mvaddch(player.row+i, player.col+ j, '*'); break;
+                case GOLD:
+                mvaddch(player.row+i, player.col+ j, 'G');
+                break;
+                case BLACKGOLD:
+                mvaddch(player.row+i, player.col+ j, 'G');
+                break;
+                case rFOOD:
+                mvaddch(player.row+i, player.col+ j,  'n');
+                break;
+                case nFOOD:
+                mvaddch(player.row+i, player.col+ j,  'n');
+                break;
+                case fFOOD:
+                mvaddch(player.row+i, player.col+ j, 'f');
+                break;
+                case mFOOD:
+                mvaddch(player.row+i, player.col+ j, 'm');
+                break;
+                case DAGGER:
+                mvaddch(player.row+i, player.col+ j, 'D');
+                break;
+                case MAGIC_WAND:
+                mvaddch(player.row+i, player.col+ j, 'W');
+                break;
+                case NORMAL_ARROW:
+                mvaddch(player.row+i, player.col+ j, 'A');
+                break;
+                case SWORD:
+                mvaddch(player.row+i, player.col+ j, 'S');
+                break;
+                case END:
+                mvaddch(player.row+i, player.col+ j, '~');
+                break;
+                default: mvaddch(player.row+i, player.col+ j, ' '); break;
+        }
+    }
+    }}
     if(strcmp(character_color, "Blue")==0) {
         attron(COLOR_PAIR(4));
         mvaddch(player.row, player.col, 'P');
@@ -2363,6 +2453,7 @@ void printMap() {
     attroff(COLOR_PAIR(1));
     refresh();
 }
+
 void createrandompillar(int row, int col, int roomRows, int roomCols){
     int number_of_pillars = rand() % 2 ;
     while(number_of_pillars --){
@@ -2780,6 +2871,13 @@ void make_it_treasure(int row, int col, int roomRows, int roomCols){
     }
     trapsfortreasure(row, col, roomRows, roomCols);
     endpoint(row, col, roomRows, roomCols);
+}
+void makeitnightmare(int row, int col, int roomRows, int roomCols){
+    for(int i =row; i<= row+roomRows; i++){
+        for(int j = col; j<=col+roomCols; j++){
+            type[i][j] = 1;
+        }
+    }
 }
 void trapsfortreasure(int row, int col, int roomRows, int roomCols){
     int retries = 5;
@@ -5235,61 +5333,84 @@ void print_message(int message){
             if(random == 3) mvprintw(1, 2, "You pick up the gold and feel the weight of fortune.\U0001F4B0");
         }
         else if(message == 8){
+            attron(COLOR_PAIR(2));
             int random = rand() %14;
             if(random == 0) {
-                mvprintw(17, 50, "You have conquered the dungeon! Even the undead tip their hats to you.");
-                mvprintw(19, 74, "Your Score: %d", player.score);
+                mvprintw(10, 50, "You have conquered the dungeon! Even the undead tip their hats to you.");
+                mvprintw(12, 74, "Your Score: %d", player.score);
             }
             if(random == 1){
-                mvprintw(17, 58, "You walked in as a warrior... and walked out a legend.");
-                mvprintw(19, 74, "Your Score: %d", player.score);
+                mvprintw(10, 58, "You walked in as a warrior... and walked out a legend.");
+                mvprintw(12, 74, "Your Score: %d", player.score);
             } 
             if(random == 2){
-                mvprintw(17, 48, "You did it! The enemies all leave you a nice \"thanks for the fun!\" note.");
-                mvprintw(19, 74, "Your Score: %d", player.score);
+                mvprintw(10, 48, "You did it! The enemies all leave you a nice \"thanks for the fun!\" note.");
+                mvprintw(12, 74, "Your Score: %d", player.score);
             } 
             if(random == 3){
-                mvprintw(17, 40, "Victory! The enemies bow down in defeat... but probably still talk trash about you later.");
-                mvprintw(19, 74, "Your Score: %d", player.score);
+                mvprintw(10, 40, "Victory! The enemies bow down in defeat... but probably still talk trash about you later.");
+                mvprintw(12, 74, "Your Score: %d", player.score);
             } 
             if(random == 4){
-                mvprintw(17, 65, "You emerge victorious, treasure in hand!");
-                mvprintw(19, 74, "Your final score : %d\U0001F3C6", player.score);
+                mvprintw(10, 65, "You emerge victorious, treasure in hand!");
+                mvprintw(12, 74, "Your final score : %d\U0001F3C6", player.score);
             }
             if(random == 5){
-                mvprintw(17, 66, "Legends will be told of your triumph!");
-                mvprintw(19, 74, "Your final score: %d\U0001F4dC\u2728", player.score);
+                mvprintw(10, 66, "Legends will be told of your triumph!");
+                mvprintw(12, 74, "Your final score: %d\U0001F4dC\u2728", player.score);
             }
             if(random == 6){
-                mvprintw(17, 64, "The dungeon trembles as you claim victory!");
-                mvprintw(19, 74,"Your final score: %d\u2694\U0001F525", player.score);
+                mvprintw(10, 64, "The dungeon trembles as you claim victory!");
+                mvprintw(12, 74,"Your final score: %d\u2694\U0001F525", player.score);
             }
             if(random == 7){
-                mvprintw(17, 68, "You made it out alive... and rich!");
-                mvprintw(19, 74, "Your final score :%d\U0001F4B0", player.score);
+                mvprintw(10, 68, "You made it out alive... and rich!");
+                mvprintw(12, 74, "Your final score :%d\U0001F4B0", player.score);
             }
             if(random == 8){
-                mvprintw(17, 63, "Even the monsters whisper your name in fear.");
-                mvprintw(19, 74, "Your final score :%d\U0001F451", player.score);
+                mvprintw(10, 63, "Even the monsters whisper your name in fear.");
+                mvprintw(12, 74, "Your final score :%d\U0001F451", player.score);
             }
             if(random == 9){
-                mvprintw(17, 52, "You crushed the dungeon, left no loot behind, and became a legend.");
-                mvprintw(19, 74, "Your final score :%d\U0001F3C5", player.score);
+                mvprintw(10, 52, "You crushed the dungeon, left no loot behind, and became a legend.");
+                mvprintw(12, 74, "Your final score :%d\U0001F3C5", player.score);
             }
             if(random == 10){
-                mvprintw(17, 51, "After all that chaos, was it worth it? Your final score says yes:%d\U0001F3AD", player.score);
+                mvprintw(10, 51, "After all that chaos, was it worth it? Your final score says yes:%d\U0001F3AD", player.score);
             }
             if(random == 11){
-                mvprintw(17, 58, "You walk away from the dungeon battered but victorious!");
-                mvprintw(19, 74, "Your final score :%d\U0001F6E1", player.score);
+                mvprintw(10, 58, "You walk away from the dungeon battered but victorious!");
+                mvprintw(12, 74, "Your final score :%d\U0001F6E1", player.score);
             }
             if(random == 12){
-                mvprintw(17, 62, "Gold, glory, and victory!");
-                mvprintw(19, 64, "Your final score:%d\U0001F37E\U0001F38A", player.score);
+                mvprintw(10, 62, "Gold, glory, and victory!");
+                mvprintw(12, 64, "Your final score:%d\U0001F37E\U0001F38A", player.score);
             }
             if(random == 13){
-                mvprintw(17, 60, "You have conquered the dungeon... but at what cost? oh right, a %d-point victory!\U0001F3F4", player.score);
+                mvprintw(10, 60, "You have conquered the dungeon... but at what cost? oh right, a %d-point victory!\U0001F3F4", player.score);
             }
+            attroff(COLOR_PAIR(2));
+            attron(COLOR_PAIR(5));
+            mvprintw(17, 46, "                                    o");
+            mvprintw(18, 46, "                                   $\"\"$o");
+            mvprintw(19, 46, "                                  $\"  $$");
+            mvprintw(20, 46, "                                   $$$$");
+            mvprintw(21, 46, "                                   o \"$o");
+            mvprintw(22, 46, "                                  o\"  \"$");
+            mvprintw(23, 46, "             oo\"$$$\"  oo$\"$ooo   o$    \"$    ooo\"$oo  $$$\"o");
+            mvprintw(24, 46, "o o o o    oo\"  o\"      \"o    $$o$\"     o o$\"\"  o$      \"$  \"oo   o o o o");
+            mvprintw(25, 46, "\"$o   \"\"$$$\"   $$         $      \"   o   \"\"    o\"         $   \"o$$\"    o$$");
+            mvprintw(26, 46, "  \"\"o       o  $          $\"       $$$$$       o          $  ooo     o\"\"");
+            mvprintw(27, 46, "     \"o   $$$$o $o       o$        $$$$$\"       $o        \" $$$$   o\"");
+            mvprintw(28, 46, "      \"\"o $$$$o  oo o  o$\"         $$$$$\"        \"o o o o\"  \"$$$  $");
+            mvprintw(29, 46, "        \"\" \"$\"     \"\"\"\"\"            \"\"$\"            \"\"\"      \"\"\" \"");
+            mvprintw(30, 46, "         \"oooooooooooooooooooooooooooooooooooooooooooooooooooooo$");
+            mvprintw(31, 46, "          \"$$$$\"$$$$\" $$$$$$$\"$$$$$$ \" \"$$$$$\"$$$$$$\"  $$$\"\"$$$$");
+            mvprintw(32, 46, "           $$$oo$$$$   $$$$$$o$$$$$$o\" $$$$$$$$$$$$$$ o$$$$o$$$\"");
+            mvprintw(33, 46, "           $\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"\"$");
+            mvprintw(34, 46, "           $\"                                                  o");
+            mvprintw(35, 46, "           $\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$\"$$");
+            attroff(COLOR_PAIR(5));
         }
         else if(message == 9){
             int random = rand() % 8;
