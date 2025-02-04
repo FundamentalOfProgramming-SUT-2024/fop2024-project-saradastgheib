@@ -2404,6 +2404,9 @@ void battleroom(){
             case ' ':
             battle_throwweapon();
             break;
+            case 'q':
+            delwin(winb);
+            return;
             default: 
             break;
         }
@@ -2412,7 +2415,7 @@ void battleroom(){
     current_message = 24;
 }
 void place_battle_monsters(){
-    int count = 20;
+    int count = rand() % 11 + 10;
     battle_room_monsters_count = 0;
     while (count --)
     {
@@ -2423,7 +2426,7 @@ void place_battle_monsters(){
             battle_monster[battle_room_monsters_count].row = row;
             battle_monster[battle_room_monsters_count].col = col;
             battle_monster[battle_room_monsters_count].hits = 0;
-            battle_monster[battle_room_monsters_count].lives = 5;
+            battle_monster[battle_room_monsters_count].lives = 7;
             battle_monster[battle_room_monsters_count].max_moves = 0;
             battle_monster[battle_room_monsters_count].alive = 1;
             battle_monster[battle_room_monsters_count].moves = 0;
@@ -2487,7 +2490,7 @@ void battle_throwweapon(){
             if(!battle_monster[i].alive) continue;
             if(abs(battle_monster[i].row - player.battle_row) <=1 &&
             abs(battle_monster[i].col - player.battle_col) <=1){
-                battle_monster[i].hits +=3;
+                battle_monster[i].hits += 5;
                 if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 9;
                 else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
                 else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 11;
@@ -2826,7 +2829,7 @@ void place_monsters(int row, int col, int roomRows, int roomCols){
                 monster[monsters_count].row = rown;
                 monster[monsters_count].col = coln;
                 monster[monsters_count].hits = 0;
-                monster[monsters_count].lives = 5;
+                monster[monsters_count].lives = 7;
                 monster[monsters_count].max_moves = 0;
                 monster[monsters_count].moves = 0;
                 monster[monsters_count].alive = 1;
