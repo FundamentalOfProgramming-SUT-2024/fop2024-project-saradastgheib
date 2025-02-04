@@ -16,6 +16,8 @@ char character_color[20]= "";
 #define MAXROW 35
 #define MAXCOL 150
 int max_health;
+int battle_map[20][40];
+int battle_room_monsters_count;
 typedef enum {
     WALLH = 0, // _
     FLOOR = 1,
@@ -53,6 +55,7 @@ typedef enum {
     magic_wand_SHOT = 33,
     normal_arrow_SHOT = 34
 } map_elements;
+WINDOW *winb;
 map_elements game_map[MAXROW][MAXCOL];
 map_elements previous[MAXROW][MAXCOL];
 int visible[MAXROW][MAXCOL];
@@ -88,6 +91,8 @@ typedef struct {
     int power;
     int speed;
     int healthp;
+    int battle_row;
+    int battle_col;
 } Player;
 Player player;
 typedef struct {
@@ -114,6 +119,7 @@ typedef struct{
     int max_moves;
     int alive;
 } Monsters;
+Monsters battle_monster[20];
 Monsters monster[20];
 int monsters_count = 0;
 typedef struct {
@@ -158,7 +164,7 @@ void removeUnconnectedDoors();
 void movePlayer(int newRow, int newCol);
 void printMap();
 void createrandompillar(int row, int col, int roomRows, int roomCols);
-int battleroom();
+void battleroom();
 void placestaircase(int row, int col, int roomRows, int roomCols);
 void placepassword(int row, int col, int roomRows, int roomCols);
 void generatedoorpass();
@@ -183,6 +189,12 @@ char generaterandompass(int type);
 int retrieve_password(const char *username, char *password);
 void display_profile();
 void monster_shot();
+void place_battle_monsters();
+void printbattleMap();
+void battle_moveplayer(int newRow, int newCol);
+void battle_movemonsters();
+void battle_throwweapon();
+void battle_monstersshoot();
 int main() {
     setlocale(LC_ALL, "");
     initscr();
@@ -988,6 +1000,7 @@ void game_area(){
             wrefresh(winc);
             getch();
             delwin(winc);
+            break;
         case 'y':
             movePlayer(player.row -1, player.col -1);
             if(player.speed) movePlayer(player.row -1, player.col -1);
@@ -1380,6 +1393,7 @@ void game_area(){
         break;
         case ' ':
          throwweapon();
+         break;
         default:
             break;
         }
@@ -2113,30 +2127,20 @@ if(game_map[newRow][newCol] == END){
     refresh();
     napms(5000);
     getch();
-
-    // Load existing data into a temporary entry
     HallOfFameEntry existing_entry = {0};
     strcpy(existing_entry.username, current_username);
     bool isExistingUser = load_user_data(&existing_entry);
-
-    // Calculate deltas for this game
     int score_delta = player.score;
     int gold_delta = player.golds;
-    int games_delta = 1; // Always 1 per game
-
-    // Prepare a delta entry with ONLY this game’s contribution
+    int games_delta = 1;
     HallOfFameEntry delta_entry = {0};
     strcpy(delta_entry.username, current_username);
     delta_entry.score = score_delta;
     delta_entry.gold_pieces = gold_delta;
     delta_entry.games_finished = games_delta;
-
-    // For new users, set first_game_time
     if (!isExistingUser) {
         delta_entry.first_game_time = time(NULL);
     }
-
-    // Save the deltas (this game’s contribution)
     savehall(delta_entry);
     monsters_count = 0;
     sword_count = 0;
@@ -2303,16 +2307,14 @@ void printMap() {
     }
     else {
     mvaddch(player.row, player.col, 'P'); 
-}
+    }
     attron(COLOR_PAIR(1));
     for(int i = 0 ; i < monsters_count; i++){
-        if(monster[i].row!=-1 && monster[i].col!= -1){
             if(strcmp(monster[i].name, "Deamon") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'D');
             else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'F');
             else if(strcmp(monster[i].name, "Giant") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'G');
             else if(strcmp(monster[i].name, "Snake") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'S');
             else if(strcmp(monster[i].name, "Undeed") == 0 && visible[monster[i].row][monster[i].col] && monster[i].alive) mvaddch(monster[i].row, monster[i].col, 'U');
-        }
     }
     attroff(COLOR_PAIR(1));
     refresh();
@@ -2336,8 +2338,321 @@ void placetrap(int row, int col, int roomRows, int roomCols){
         placetrap(row, col, roomRows, roomCols);
     }
 }
-int battleroom(){
-    player.health --;
+void battleroom(){
+    winb = newwin(30, 60, 4,60);
+    keypad(winb, TRUE);
+    box(winb, 0, 0);
+    battle_map[0][0] = WALLNO;
+    battle_map[0][39]= WALLNO;
+    battle_map[19][0]= WALLV;
+    battle_map[19][39] = WALLV;
+    for(int i = 1; i < 39; i++){
+        battle_map[0][i] = WALLH;
+        battle_map[19][i] = WALLH;
+    }
+    for(int i = 1; i< 19; i++){
+        battle_map[i][0] = WALLV;
+        battle_map[i][39] = WALLV;
+    }
+    for(int i =1; i< 39; i++){
+        for(int j = 1; j< 19; j++){
+            battle_map[j][i] = FLOOR;
+        }
+    }
+    player.battle_row = 1;
+    player.battle_col = 1;
+    place_battle_monsters();
+    while(battle_room_monsters_count > 0 && player.health > 0){
+        printbattleMap();
+        mvwprintw(winb, 1, 2, "Health: %d/%d", player.health,max_health);
+        wrefresh(winb);
+        print_message(current_message);
+        int ch = getch();
+        switch(ch){
+            case 'y':
+            battle_moveplayer(player.battle_row - 1, player.battle_col - 1);
+            battle_movemonsters();
+            break;
+            case 'u':
+            battle_moveplayer(player.battle_row - 1, player.battle_col +1);
+            battle_movemonsters();
+            break;
+            case 'h':
+            battle_moveplayer(player.battle_row , player.battle_col -1);
+            battle_movemonsters();
+            break;
+            case 'j':
+            battle_moveplayer(player.battle_row -1, player.battle_col);
+            battle_movemonsters();
+            break;
+            case 'k':
+            battle_moveplayer(player.battle_row + 1, player.battle_col);
+            battle_movemonsters();
+            break;
+            case 'l':
+            battle_moveplayer(player.battle_row, player.battle_col+1);
+            battle_movemonsters();
+            break;
+            case 'b':
+            battle_moveplayer(player.battle_row + 1, player.battle_col - 1);
+            battle_movemonsters();
+            break;
+            case 'n':
+            battle_moveplayer(player.battle_row + 1, player.battle_col + 1);
+            battle_movemonsters();
+            break;
+            case ' ':
+            battle_throwweapon();
+            break;
+            default: 
+            break;
+        }
+    }
+    delwin(winb);
+    current_message = 24;
+}
+void place_battle_monsters(){
+    int count = 20;
+    battle_room_monsters_count = 0;
+    while (count --)
+    {
+        int row = rand() % 18 + 1;
+        int col = rand() % 38 + 1;
+        int which = rand() % 5;
+        if(which == 0){
+            battle_monster[battle_room_monsters_count].row = row;
+            battle_monster[battle_room_monsters_count].col = col;
+            battle_monster[battle_room_monsters_count].hits = 0;
+            battle_monster[battle_room_monsters_count].lives = 5;
+            battle_monster[battle_room_monsters_count].max_moves = 0;
+            battle_monster[battle_room_monsters_count].alive = 1;
+            battle_monster[battle_room_monsters_count].moves = 0;
+            strcpy(battle_monster[battle_room_monsters_count].name, "Deamon");
+            battle_monster[battle_room_monsters_count].moving = 0;
+            battle_room_monsters_count++;
+        }
+        else if(which == 1){
+            battle_monster[battle_room_monsters_count].row = row;
+            battle_monster[battle_room_monsters_count].col = col;
+            battle_monster[battle_room_monsters_count].hits = 0;
+            battle_monster[battle_room_monsters_count].lives = 10;
+            battle_monster[battle_room_monsters_count].max_moves = 0;
+            battle_monster[battle_room_monsters_count].alive = 1;
+            battle_monster[battle_room_monsters_count].moves = 0;
+            strcpy(battle_monster[battle_room_monsters_count].name, "Fire Breathing Monster");
+            battle_monster[battle_room_monsters_count].moving = 0;
+            battle_room_monsters_count++;
+        }
+        else if(which == 2){
+            battle_monster[battle_room_monsters_count].row = row;
+            battle_monster[battle_room_monsters_count].col = col;
+            battle_monster[battle_room_monsters_count].hits = 0;
+            battle_monster[battle_room_monsters_count].lives = 15;
+            battle_monster[battle_room_monsters_count].max_moves = 5;
+            battle_monster[battle_room_monsters_count].moves = 0;
+            battle_monster[battle_room_monsters_count].alive = 1;
+            strcpy(battle_monster[battle_room_monsters_count].name, "Giant");
+            battle_monster[battle_room_monsters_count].moving = 0;
+            battle_room_monsters_count ++;
+        }
+        else if(which == 3){
+            battle_monster[battle_room_monsters_count].row = row;
+            battle_monster[battle_room_monsters_count].col = col;
+            battle_monster[battle_room_monsters_count].hits = 0;
+            battle_monster[battle_room_monsters_count].lives = 20;
+            battle_monster[battle_room_monsters_count].max_moves = 2000;
+            battle_monster[battle_room_monsters_count].moves = 0;
+            battle_monster[battle_room_monsters_count].alive = 1;
+            strcpy(battle_monster[battle_room_monsters_count].name, "Snake");
+            battle_monster[battle_room_monsters_count].moving = 0;
+            battle_room_monsters_count ++;
+        }
+        else if(which == 4){
+            battle_monster[battle_room_monsters_count].row = row;
+            battle_monster[battle_room_monsters_count].col = col;
+            battle_monster[battle_room_monsters_count].hits = 0;
+            battle_monster[battle_room_monsters_count].lives = 30;
+            battle_monster[battle_room_monsters_count].max_moves = 5;
+            battle_monster[battle_room_monsters_count].moves = 0;
+            battle_monster[battle_room_monsters_count].alive = 1;
+            strcpy(battle_monster[battle_room_monsters_count].name, "Undeed");
+            battle_monster[battle_room_monsters_count].moving = 0;
+            battle_room_monsters_count ++;
+        }
+    }
+}
+void battle_throwweapon(){
+    if(rand() % 5 != 0){
+        for (int i =0 ; i< battle_room_monsters_count; i++){
+            if(!battle_monster[i].alive) continue;
+            if(abs(battle_monster[i].row - player.battle_row) <=1 &&
+            abs(battle_monster[i].col - player.battle_col) <=1){
+                battle_monster[i].hits +=3;
+                if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 9;
+                else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 10;
+                else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 11;
+                else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 12;
+                else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 13;
+                if(battle_monster[i].hits >= battle_monster[i].lives){
+                    battle_monster[i].alive = 0;
+                    battle_room_monsters_count --;
+                    battle_monster[i].moves = battle_monster[i].max_moves;
+                    if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 14;
+                    else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 15;
+                    else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 16;
+                    else if(strcmp(battle_monster[i].name, "Snake")==0) current_message = 17;
+                    else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 18;
+                }
+            }
+        }
+    }
+    else {
+        battle_monstersshoot();
+    }
+}
+void battle_monstersshoot(){
+    for(int i =0 ; i< battle_room_monsters_count; i++){
+        if(player.battle_row>= battle_monster[i].row - 1 &&player.battle_row <= battle_monster[i].row + 1
+        && player.battle_col >= battle_monster[i].col - 1 && player.battle_col <= battle_monster[i].col
+        && battle_monster[i].alive){
+            if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 19;
+            else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+            else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+            else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+            else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+            player.health --;
+        }
+    }
+}
+void battle_moveplayer(int newRow, int newCol){
+    if(newRow >= 0 && newRow<MAXROW && newCol >= 0 && newCol < MAXCOL &&
+    battle_map[newRow][newCol] == FLOOR){
+        player.battle_row = newRow;
+        player.battle_col = newCol;
+    }
+    for(int i = 0; i <battle_room_monsters_count; i++){
+        if(player.battle_row >= battle_monster[i].row - 1&&  player.battle_row <= battle_monster[i].row + 1
+        && player.battle_col >= battle_monster[i].col - 1 && player.battle_col <= battle_monster[i].col + 1
+        && battle_monster[i].alive){
+        if(battle_monster[i].moves < battle_monster[i].max_moves) battle_monster[i].moving = 1;
+        if(strcmp(battle_monster[i].name, "Deamon")==0) current_message =19;
+        else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+        else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+        else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+        else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+        player.health -- ;
+        }
+    }
+}
+void battle_movemonsters(){
+    for(int i =0 ; i< battle_room_monsters_count; i++){
+        if(battle_monster[i].moving && battle_monster[i].alive){
+            if(player.battle_row >= battle_monster[i].row && battle_map[battle_monster[i].row + 1][battle_monster[i].col] == FLOOR){
+                if(player.battle_row != battle_monster[i].row + 1 && player.battle_col != battle_monster[i].col) battle_monster[i].row++;
+                else {
+                    if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 19;
+                    else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+                    else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                    else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+                    else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+                    player.health --;
+                }
+                battle_monster[i].moves ++;
+            }
+            else if(player.battle_row<=battle_monster[i].row && battle_map[battle_monster[i].row - 1][battle_monster[i].col] == FLOOR){
+                if(player.battle_row != battle_monster[i].row - 1 && player.battle_col!= battle_monster[i].col) battle_monster[i].row --;
+                else{
+                    if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 19;
+                    else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+                    else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                    else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+                    else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+                    player.health --;
+                }
+                battle_monster[i].moves ++;
+            }
+            else if(player.battle_col <= battle_monster[i].col && battle_map[battle_monster[i].row][battle_monster[i].col -1] == FLOOR){
+                if(player.battle_row != battle_monster[i].row && player.battle_col != battle_monster[i].col -1) battle_monster[i].col --;
+                else{
+                    if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 19;
+                    else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+                    else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                    else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+                    else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+                    player.health --;
+                }
+                battle_monster[i].moves ++;
+            }
+            else if(player.battle_col >= battle_monster[i].col && battle_map[battle_monster[i].row][battle_monster[i].col + 1] == FLOOR){
+                if(player.battle_row != battle_monster[i].row && player.battle_col != battle_monster[i].col+1) battle_monster[i].col++;
+                else{
+                    if(strcmp(battle_monster[i].name, "Deamon") == 0) current_message = 19;
+                    else if(strcmp(battle_monster[i].name, "Giant") == 0) current_message = 20;
+                    else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
+                    else if(strcmp(battle_monster[i].name, "Snake") == 0) current_message = 22;
+                    else if(strcmp(battle_monster[i].name, "Undeed") == 0) current_message = 23;
+                    player.health --;
+                }
+                battle_monster[i].moves ++;
+            }
+            if(battle_monster[i].moves >= battle_monster[i].max_moves){
+                battle_monster[i].moving= 0;
+            }
+        }
+    }
+}
+void printbattleMap(){
+    wclear(winb);
+    box(winb, 0, 0);
+    for(int i =0; i<20; i++){
+        for(int j = 0; j< 40; j++){
+            switch(battle_map[i][j]){
+                case WALLV:
+                mvwaddch(winb, i+5, j+ 10, '|');
+                break;
+                case WALLH:
+                mvwaddch(winb, i+5, j+10, '_');
+                break;
+                case WALLNO:
+                mvwaddch(winb, i+5, j+10, ' ');
+                break;
+                case FLOOR:
+                mvwaddch(winb, i+5, j+10, '.');
+                break;
+                default: 
+                mvwaddch(winb, i+5, j+10, ' ');
+                break;
+            }
+        }
+    }
+    if(strcmp(character_color, "Blue")==0) {
+        wattron(winb, COLOR_PAIR(4));
+        mvwaddch(winb, player.battle_row + 5, player.battle_col + 10, 'P');
+        wattroff(winb, COLOR_PAIR(4));
+    }
+    else if(strcmp(character_color, "Magenta")==0){
+        wattron(winb, COLOR_PAIR(3));
+        mvwaddch(winb, player.battle_row + 5, player.battle_col+ 10, 'P');
+        wattroff(winb, COLOR_PAIR(3));
+    }
+    else if(strcmp(character_color, "Green")==0){
+        wattron(winb, COLOR_PAIR(2));
+        mvwaddch(winb, player.battle_row + 5, player.battle_col + 10, 'P');
+        wattroff(winb, COLOR_PAIR(2));
+    }
+    else {
+    mvwaddch(winb, player.battle_row + 5, player.battle_col + 10, 'P'); 
+    }
+    wattron(winb, COLOR_PAIR(1));
+    for(int i = 0; i < battle_room_monsters_count; i++){
+        if(strcmp(battle_monster[i].name, "Deamon") == 0 && battle_monster[i].alive) mvwaddch(winb, battle_monster[i].row+5, battle_monster[i].col +10, 'D');
+        else if(strcmp(battle_monster[i].name, "Fire Breathing Monster") == 0 && battle_monster[i].alive) mvwaddch(winb, battle_monster[i].row + 5, battle_monster[i].col + 10, 'F');
+        else if(strcmp(battle_monster[i].name, "Giant") == 0 && battle_monster[i].alive) mvwaddch(winb, battle_monster[i].row +5, battle_monster[i].col + 10, 'G');
+        else if(strcmp(battle_monster[i].name, "Snake") == 0 && battle_monster[i].alive) mvwaddch(winb, battle_monster[i].row + 5, battle_monster[i].col+ 10, 'S');
+        else if(strcmp(battle_monster[i].name, "Undeed") ==0 && battle_monster[i].alive) mvwaddch(winb, battle_monster[i].row + 5, battle_monster[i].col+ 10, 'U');
+    }
+    wattroff(winb, COLOR_PAIR(1));
+    wrefresh(winb);
 }
 void placestaircase(int row, int col, int roomRows, int roomCols){
     int rown = (rand() % (roomRows - 2)) + row + 1;
@@ -5049,7 +5364,7 @@ void print_message(int message){
             attroff(COLOR_PAIR(1));
         }
         else if(message == 22){
-            int random = rand() % 3;
+            int random = rand() % 4;
             attron(COLOR_PAIR(1));
             if(random == 0) mvprintw(1, 2, "You feel a sharp bite—congrats, you’re venomous now!");
             else if(random == 1) mvprintw(1, 2, "The snake hisses, ‘I was aiming for your ego.’");
@@ -5064,6 +5379,19 @@ void print_message(int message){
             else if(random == 1) mvprintw(1, 2, "You get hit with the stench of death… and a sword!");
             else if(random == 2) mvprintw(1, 2, "A bony fist collides with your face. The skeleton cackles.");
             attroff(COLOR_PAIR(2));
+        }
+        else if(message == 24){
+            int random = rand() % 9;
+            attron(COLOR_PAIR(2));
+            if(random ==0 ) mvprintw(1, 2, "You stagger out, still breathing. A win’s a win! 😮‍💨🩹");
+            else if(random == 1) mvprintw(1, 2, "That could’ve gone worse… or better. Let’s not dwell on it. 🤕");
+            else if(random == 2) mvprintw(1, 2, "You wipe the sweat off your brow. That was too close! 😓");
+            else if(random == 3) mvprintw(1, 2, "You strut out like a legend. Enemies? More like practice dummies. 😎✨");
+            else if(random == 4) mvprintw(1, 2, "Well, that was easy. Maybe too easy. Who’s next? 😏⚔️");
+            else if(random == 5) mvprintw(1, 2, "Your enemies whisper your name in fear now. Nice. 👑💀");
+            else if(random == 6) mvprintw(1, 2, "You limp away, but hey—you didn’t die. Small victories! 😵‍💫");
+            else if(random ==7) mvprintw(1, 2, "That wasn’t a battle. That was survival. Never again. 🏃");
+            else if(random == 8) mvprintw(1, 2, "If this was a test, you passed… by the skin of your teeth. 😬📉");
         }
         current_message = -1;
         refresh();
@@ -5082,13 +5410,12 @@ void monster_shot(){
         if(player.row >= monster[i].row- 1 && player.row <= monster[i].row +1
         && player.col >= monster[i].col -1 && player.col <= monster[i].col +1
         && monster[i].alive){
-            if(rand() % 3 == 0){if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
+           if(strcmp(monster[i].name, "Deamon") == 0) current_message = 19;
             else if(strcmp(monster[i].name, "Giant") == 0) current_message = 20;
             else if(strcmp(monster[i].name, "Fire Breathing Monster") == 0) current_message = 21;
             else if(strcmp(monster[i].name, "Snake") == 0) current_message = 22;
             else if(strcmp(monster[i].name, "Undeed") == 0) current_message = 23;
             player.health --;
-            }
         }
 }
 }
